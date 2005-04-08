@@ -103,26 +103,9 @@ require_once 'PHP/Archive.php';
 stream_register_wrapper('phar', 'PHP_Archive');
 PHP;
 
-        if ($compress == true) {
-            $unpack_code .= <<<PHP
-
-if (!defined('PHP_ARCHIVE_COMPRESSED')) {
-    define('PHP_ARCHIVE_COMPRESSED', true);
-}
-
-PHP;
-        } else {
-            $unpack_code .= <<<PHP
-
-if (!defined('PHP_ARCHIVE_COMPRESSED')) {
-    define('PHP_ARCHIVE_COMPRESSED', false);
-}
-
-PHP;
-        }
-        
         if (!$allow_direct_access) {
             $unpack_code .= <<<PHP
+
 require_once 'phar://$init_file';
 PHP;
         } else {
@@ -132,6 +115,7 @@ PHP;
                 $allow_direct_access = '.' . $allow_direct_access;
             }
             $unpack_code .= <<<PHP
+
 require_once 'phar://{$_SERVER['PATH_INFO']}$allow_direct_access';
 PHP;
         }
@@ -172,7 +156,12 @@ PHP;
         $this->modified = true;
         $file_contents = file_get_contents($file);
         if ($this->compress) {
-            $file_contents = base64_encode(gzcompress($file_contents));
+            $file_contents = '1' . base64_encode(
+                pack("C1C1C1C1VC1C1", 0x1f, 0x8b, 8, 0, time(), 2, 0xFF) .
+                gzdeflate($file_contents, 9) .
+                pack("VV",crc32($file_contents),strlen($file_contents)));
+        } else {
+            $file_contents = '0' . $file_contents;
         }
         return $this->tar->addString($save_path, $file_contents);
     }
