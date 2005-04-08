@@ -104,7 +104,7 @@ class PHP_Archive {
         @fread($this->_file, $this->internalFileLength + $this->footerLength);
         $rawHeader = @fread($this->_file, 512);
         if (strlen($rawHeader) < 512 || $rawHeader == pack("a512", "")) {
-            'Error: phar "' . $this->archiveName . '" has no tar header';
+            return 'Error: phar "' . $this->archiveName . '" has no tar header';
         }
 
         $header = unpack(
