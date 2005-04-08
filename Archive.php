@@ -4,7 +4,6 @@
  *
  * @package PHP_Archive
  * @category PHP
- * @todo implement phar://basenamefile.phar/path/to/file.php
  */
 
 /**
