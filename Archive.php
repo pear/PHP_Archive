@@ -18,6 +18,7 @@
  *
  * @copyright Copyright © David Shafik and Synaptic Media 2004. All rights reserved.
  * @author Davey Shafik <davey@synapticmedia.net>
+ * @author Greg Beaver <cellog@php.net>
  * @link http://www.synapticmedia.net Synaptic Media
  * @version $Id$
  * @package PHP_Archive
