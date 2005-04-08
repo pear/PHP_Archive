@@ -4,19 +4,8 @@
  *
  * @package PHP_Archive
  * @category PHP
+ * @todo implement phar://basenamefile.phar/path/to/file.php
  */
-
-/**
- * Directory that contains this file
- */
- 
-define('PHP_ARCHIVE_BASEDIR', dirname(__FILE__));
-
-/**
- * Data Directory for PHP_Archive
- */
- 
-define('PHP_ARCHIVE_DATA_DIR', PHP_ARCHIVE_BASEDIR . DIRECTORY_SEPARATOR .'..'. DIRECTORY_SEPARATOR .'data'. DIRECTORY_SEPARATOR .'PHP_Archive'. DIRECTORY_SEPARATOR .'data');
 
 /**
  * PHP_Archive Class (implements .phar)
@@ -25,6 +14,8 @@ define('PHP_ARCHIVE_DATA_DIR', PHP_ARCHIVE_BASEDIR . DIRECTORY_SEPARATOR .'..'. 
  * To use it, simply package it using {@see PHP_Archive_Creator} and use phar://
  * URIs to your includes. i.e. require_once 'phar://config.php' will include config.php
  * from the root of the PHAR file.
+ *
+ * Tar/Gz code borrowed from the excellent File_Archive package by Vincent Lascaux.
  *
  * @copyright Copyright © David Shafik and Synaptic Media 2004. All rights reserved.
  * @author Davey Shafik <davey@synapticmedia.net>
@@ -39,16 +30,35 @@ class PHP_Archive {
     /**
      * @var string Archive filename
      */
-    
-    var $archive_name = null;
-    var $currentStat = null;
-    var $currentFilename = null;
-    var $internalFileLength = null;
+
+    var $archiveName = null;
+
     /**
-     * @var object Archive_Tar object
+     * Current Stat info of the current file in the tar
      */
-    
-    var $archive = null;
+
+    var $currentStat = null;
+
+    /**
+     * Current file name in the tar
+     * @var string
+     */
+
+    var $currentFilename = null;
+
+    /**
+     * Length of the current tar file
+     * @var int
+     */
+
+    var $internalFileLength = 0;
+
+    /**
+     * Length of the current tar file's footer
+     * @var int
+     */
+
+    var $footerLength = 0;
     
     /**
      * @var string Content of the file being requested
@@ -61,23 +71,6 @@ class PHP_Archive {
      */
     
     var $position = 0;
-    
-    /**
-     * Start the stream
-     *
-     * Opens the PHP Archive, which is the file being called
-     */
-    
-    function stream_start()
-    {
-        $aname = get_included_files();
-        array_pop($aname);
-        $this->archive_name = array_pop($aname);
-        require_once 'PEAR.php';
-//        require_once 'Archive/Tar.php';
-//        $this->archive =  new Archive_Tar($this->archive_name);
-        return true;
-    }
 
     function _processFile($path)
     {
@@ -85,7 +78,7 @@ class PHP_Archive {
             return '';
         }
         $std = str_replace("\\", "/", $path);
-        while ($std != ($std = preg_replace("/[^\/:?]+\/\.\.\//", "", $std))) ;
+        while ($std != ($std = ereg_replace("[^\/:?]+/\.\./", "", $std))) ;
         $std = str_replace("/./", "", $std);
         if (strncmp($std, "./", 2) == 0) {
             return substr($std, 2);
@@ -98,29 +91,21 @@ class PHP_Archive {
     {
         $std = $this->_processFile($path);
         while (($error = $this->_nextFile()) === true) {
-            $sourceName = $this->currentFilename;
             if (empty($std) || $std == $this->currentFilename ||
                   //$std is a directory
-                  strncmp($std.'/', $sourceName, strlen($std)+1) == 0) {
+                  strncmp($std.'/', $this->currentFilename, strlen($std)+1) == 0) {
                 return true;
             }
         }
         return $error;
     }
 
-    function _open()
-    {
-        $this->_file = @fopen($this->archive_name, "rb");
-        if (!$this->_file) {
-            return PEAR::raiseError('Error: cannot open phar "' . $this->archive_name . '"');
-        }
-    }
-
     function _nextFile()
     {
+        @fread($this->_file, $this->internalFileLength + $this->footerLength);
         $rawHeader = @fread($this->_file, 512);
         if (strlen($rawHeader) < 512 || $rawHeader == pack("a512", "")) {
-            return PEAR::raiseError('Error: phar "' . $this->archive_name . '" has no tar header');
+            'Error: phar "' . $this->archiveName . '" has no tar header';
         }
 
         $header = unpack(
@@ -145,28 +130,71 @@ class PHP_Archive {
 
         $this->currentFilename = $this->_processFile($header['path'] . $header['filename']);
         $checksum = 8 * ord(" ");
-        for ($i = 0; $i < 148; $i++) {
-            $checksum += ord($rawHeader{$i});
-        }
-        for ($i = 156; $i < 512; $i++) {
-            $checksum += ord($rawHeader{$i});
+        if (version_compare(phpversion(), '5.0.0', '>=')) {
+            $c1 = str_split(substr($rawHeader, 0, 512));
+            $checkheader = array_merge(array_slice($c1, 0, 148), array_slice($c1, 156));
+            if (!function_exists('_PharDoChecksum')) {
+                function _PharDoChecksum($a, $b) {return $a + ord($b);}
+            }
+            $checksum += array_reduce($checkheader, '_PharDoChecksum');
+        } else {
+            for ($i = 0; $i < 148; $i++) {
+                $checksum += ord($rawHeader{$i});
+            }
+            for ($i = 156; $i < 512; $i++) {
+                $checksum += ord($rawHeader{$i});
+            }
         }
 
         if (octdec($header['checksum']) != $checksum) {
-            return PEAR::raiseError('Error: phar "' .
-                $this->archive_name . '" Checksum error on entry "' . $this->currentFilename . '"');
+            return 'Error: phar "' .
+                $this->archiveName . '" Checksum error on entry "' . $this->currentFilename . '"';
         }
         return true;
     }
 
     function extractFile($path)
     {
-        $this->_open();
-        if ($this->_selectFile($path)) {
-            $actualLength = $this->internalFileLength;
-            $data = @fread($this->_file, $actualLength);
-            return $data;
+        $this->_file = @fopen($this->archiveName, "rb");
+        if (!$this->_file) {
+            return array('Error: cannot open phar "' . $this->archiveName . '"');
         }
+        if (($e = $this->_selectFile($path)) === true) {
+            $data = @fread($this->_file, $this->internalFileLength);
+            @fclose($this->_file);
+            return $data;
+        } else {
+            @fclose($this->_file);
+            return array($e);
+        }
+    }
+
+    /**
+     * Start the stream
+     *
+     * Opens the PHP Archive, which is the file being called
+     * @param string
+     * @return bool
+     */
+    
+    function initializeStream($file)
+    {
+        $aname = get_included_files();
+        $this->archiveName = 'phar://';
+        if (strpos($file, '.phar')) {
+            // grab the basename of the phar we want
+            $test = substr($file, 0, strpos($file, '.phar') + 5);
+        } else {
+            $test = false;
+        }
+        while (strpos($this->archiveName, 'phar://') === 0 &&
+                (!$test || !strpos($this->archiveName, $test))) {
+            $this->archiveName = array_pop($aname);
+        }
+        if ($test && $this->archiveName != 'phar://') {
+            $file = substr($file, strlen($test) + 1);
+        }
+        return $file;
     }
 
     /**
@@ -178,17 +206,25 @@ class PHP_Archive {
     function stream_open($file)
     {
         $path = substr($file, 7);
-        $this->stream_start();
-        $this->file = $this->extractFile($path);
+        $path = $this->initializeStream($path);
+        if ($this->archiveName == 'phar://') {
+            trigger_error('Error: Unknown phar in "' . $file . '"', E_USER_ERROR);
+        }
+        if (is_array($this->file = $this->extractFile($path))) {
+            trigger_error($this->file[0], E_USER_ERROR);
+            return false;
+        }
         $compressed = $this->file ? (int) $this->file{0} : false;
         $this->file ? $this->file = substr($this->file, 1) : false;
         if ($compressed) {
+            if (!function_exists('gzinflate')) {
+                trigger_error('Error: zlib extension is not enabled - gzinflate() function needed' .
+                    ' for compressed .phars');
+                return false;
+            }
             $this->file = base64_decode($this->file);
-            // code borrowed from File_Archive_Reader_Gzip by Greg Beaver
             $header = substr($this->file, 0, 10);
             $temp = unpack("Vcrc32/Visize", substr($this->file, -8));
-            $crc32 = $temp['crc32'];
-            $size = $temp['isize'];
     
             $id = @unpack("H2id1/H2id2/C1tmp/C1flags", substr($header, 0, 4));
             if ($id['id1'] != "1f" || $id['id2'] != "8b") {
@@ -197,12 +233,12 @@ class PHP_Archive {
             }
             $this->file = gzinflate(substr($this->file, 10, strlen($this->file) - 8));
 
-            if ($size != strlen($this->file)) {
+            if ($temp['isize'] != strlen($this->file)) {
                 trigger_error("Not valid gz file (size error {$size} != " .
                     strlen($this->file) . ")", E_USER_ERROR);
                 return false;
             }
-            if ($crc32 != crc32($this->file)) {
+            if ($temp['crc32'] != crc32($this->file)) {
                 trigger_error("Not valid gz file (checksum error)", E_USER_ERROR);
                 return false;
             }
@@ -222,8 +258,6 @@ class PHP_Archive {
     
     function stream_read($count)
     {
-        static $i = 0;
-        $i++;
         $ret = substr($this->file, $this->position, $count);
 		$this->position += strlen($ret);
 		return $ret;
@@ -255,11 +289,21 @@ class PHP_Archive {
 	}
 	
 	/**
-	 * The result of an fstat call, returns no values
+	 * The result of an fstat call, returns mod time from tar, and file size
 	 */
 	
 	function stream_stat() {
-	    return array();
+	    return array(
+	       'mtime' => $this->currentStat[9],
+	       'atime' => $this->currentStat[9],
+	       'ctime' => $this->currentStat[9],
+	       'size' => strlen($this->file),
+	       );
+	}
+
+	function APIVersion()
+	{
+	    return '0.5';
 	}
 }
 

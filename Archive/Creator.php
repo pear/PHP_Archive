@@ -11,7 +11,12 @@
  */
 
 require_once 'PHP/Archive.php';
- 
+
+/**
+ * Require System, for temporary dir functions
+ */
+require_once 'System.php';
+
 /**
  * Require Archive_Tar
  */
@@ -87,8 +92,10 @@ class PHP_Archive_Creator {
     function __construct($init_file = 'index.php', $compress = false, $allow_direct_access = false)
     {
         $this->compress = $compress;
-        $this->temp_path = tempnam(PHP_ARCHIVE_DATA_DIR, 'phr');
+        $this->temp_path = System::mktemp('phr');
         $tar = new Archive_Tar($this->temp_path);
+        $contents = trim(str_replace(array('<?php', '?>'), array('', ''),
+            file_get_contents(dirname(dirname(__FILE__)) . DIRECTORY_SEPARATOR . 'Archive.php')));
         $unpack_code = <<<PHP
         
         
@@ -99,8 +106,15 @@ class PHP_Archive_Creator {
         
         
 
-require_once 'PHP/Archive.php';
-stream_register_wrapper('phar', 'PHP_Archive');
+if (!class_exists('PHP_Archive')) {
+$contents
+}
+if (PHP_Archive::APIVersion() != '0.5') {
+die('Error: PHP_Archive must be API version 0.5 - use bundled PHP_Archive for success');
+}
+if (!in_array('phar', stream_get_wrappers())) {
+    stream_wrapper_register('phar', 'PHP_Archive');
+}
 PHP;
 
         if (!$allow_direct_access) {
@@ -125,7 +139,7 @@ PHP;
 exit;
 ?>
 PHP;
-        $tar->addString('<?php #PHP_ARCHIVE_HEADER-0.4.0.php', $unpack_code);
+        $tar->addString('<?php #PHP_ARCHIVE_HEADER-0.5.0.php', $unpack_code);
         
         $this->code = $unpack_code;
         
@@ -209,7 +223,6 @@ PHP;
     function savePhar($file_path = null)
     {
         copy($this->temp_path, $file_path);
-        unlink($this->temp_path);
     }
     
 }
