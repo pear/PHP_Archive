@@ -136,8 +136,13 @@ PHP;
         
         $unpack_code .= <<<PHP
         
-exit;
+if (count(get_included_files()) > 1) {
+    return;
+} else {
+    exit;
+}
 ?>
+<?php __HALT_PHP_PARSER__; ?>
 PHP;
         $tar->addString('<?php #PHP_ARCHIVE_HEADER-0.5.0.php', $unpack_code);
         
@@ -177,6 +182,7 @@ PHP;
         } else {
             $file_contents = '0' . $file_contents;
         }
+        clearstatcache(); // a newly created archive could be erased if this is not performed
         return $this->tar->addString($save_path, $file_contents);
     }
     

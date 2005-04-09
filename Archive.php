@@ -59,12 +59,18 @@ class PHP_Archive {
      */
 
     var $footerLength = 0;
-    
+
     /**
      * @var string Content of the file being requested
      */
     
     var $file = null;
+
+    /**
+     * @var resource|null Pointer to open .phar
+     */
+    
+    var $_file = null;
     
     /**
      * @var int Current Position of the pointer
@@ -100,12 +106,10 @@ class PHP_Archive {
         return $error;
     }
 
-    function _nextFile()
+    function _processHeader($rawHeader)
     {
-        @fread($this->_file, $this->internalFileLength + $this->footerLength);
-        $rawHeader = @fread($this->_file, 512);
         if (strlen($rawHeader) < 512 || $rawHeader == pack("a512", "")) {
-            return 'Error: phar "' . $this->archiveName . '" has no tar header';
+            return 'Error: phar "' . $this->archiveName . '" has corrupted tar header';
         }
 
         $header = unpack(
@@ -127,7 +131,43 @@ class PHP_Archive {
         } else {
             $this->footerLength = 512 - $this->internalFileLength % 512;
         }
+        return $header;
+    }
 
+    function _nextFile()
+    {
+        @fread($this->_file, $this->internalFileLength + $this->footerLength);
+        $rawHeader = @fread($this->_file, 512);
+        $header = $this->_processHeader($rawHeader);
+        if (is_string($header)) {
+            return $header;
+        }
+        if ($header['type'] == '5') {
+            return false; // directory entry
+        }
+
+        if ($header['type'] == 'L') {
+            // filenames longer than 100 characters
+            // borrowed from Archive_Tar written by Vincent Blavet
+            $longFilename = '';
+            $n = floor($header['size']/512);
+            for ($i=0; $i < $n; $i++) {
+                $content = @fread($this->_file, 512);
+                $longFilename .= $content;
+            }
+            if (($header['size'] % 512) != 0) {
+                $content = @fread($this->_file, 512);
+                $longFilename .= $content;
+            }
+            // ----- Read the next header
+            $newHeader = @fread($this->_file, 512);
+            $header = $this->_processHeader($newHeader);
+            if (is_string($header)) {
+                return $header;
+            }
+            $header['filename'] = trim($longFilename);
+            $rawHeader = $newHeader;
+        }
         $this->currentFilename = $this->_processFile($header['path'] . $header['filename']);
         $checksum = 8 * ord(" ");
         if (version_compare(phpversion(), '5.0.0', '>=')) {

@@ -1,9 +1,16 @@
 <?php
 require_once 'PEAR/PackageFileManager.php';
 
-$version = '0.4.0';
+$version = '0.5.0';
 $notes = <<<EOT
-Made PHP_Archive_Creator smarter
+ * Full support for multiple .phars! phar://pharname.phar/file
+   and phar://phar2.phar/anotherfile will work now
+ * Fix gz compression
+ * remove Archive_Tar dep for non-creation
+ * remove preg dep for non-creation
+ * bundle PHP_Archive in all created .phars - standalone! Only
+   compressed .phars have a dep on zlib
+ * Add support for filenames > 100 characters in length and unit test
 EOT;
 
 $description =<<<EOT
@@ -19,8 +26,8 @@ $result = $package->setOptions(array(
     'version'           => $version,
     'state'             => 'alpha',
     'license'           => 'PHP License',
-    'ignore'            => array('*old*','*entries*','*Template*','*Root*','*Repository*','package.php', 'package.xml', '*.bak', '*src*', '*.tgz', '*pear_media*', 'index.htm'),
-	'filelistgenerator' => 'file', // other option is 'file'
+    'ignore'            => array('package.php', 'package.xml', '*.bak', '*src*', '*.tgz', '*pear_media*', 'index.htm'),
+	'filelistgenerator' => 'cvs', // other option is 'file'
     'notes'             => $notes,
     'changelogoldtonew' => false,
     'baseinstalldir'    => 'PHP',
@@ -38,7 +45,8 @@ $package->addMaintainer('davey','lead','Davey Shafik','davey@php.net');
 /*
 $package->addDependency('tokenizer', '', 'has', 'ext', false);*/
 //$package->addDependency('auto');
-$package->addDependency('Archive_Tar', '1.2', 'ge', 'pkg', false);
+$package->addDependency('Archive_Tar', '1.3.1', 'ge', 'pkg', false);
+$package->addDependency('PEAR', '1.3.5', 'ge', 'pkg', false);
 $package->addDependency('php', '4.3.0', 'ge', 'php', false);
 
 if (isset($_SERVER['argv'][1]) && $_SERVER['argv'][1] == 'commit') {
