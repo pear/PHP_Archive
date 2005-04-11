@@ -173,8 +173,29 @@ PHP;
     
     function addFile($file, $save_path)
     {
-        $this->modified = true;
         $file_contents = file_get_contents($file);
+        if ($this->compress) {
+            $file_contents = '1' . base64_encode(
+                pack("C1C1C1C1VC1C1", 0x1f, 0x8b, 8, 0, time(), 2, 0xFF) .
+                gzdeflate($file_contents, 9) .
+                pack("VV",crc32($file_contents),strlen($file_contents)));
+        } else {
+            $file_contents = '0' . $file_contents;
+        }
+        clearstatcache(); // a newly created archive could be erased if this is not performed
+        return $this->tar->addString($save_path, $file_contents);
+    }
+
+    /**
+     * Add a string to the PHP Archive as a file
+     *
+     * @param string $file_contents Contents of the File to add
+     * @param string $save_path The save location of the file in the archive
+     * @return boolean
+     */
+    
+    function addString($file_contents, $save_path)
+    {
         if ($this->compress) {
             $file_contents = '1' . base64_encode(
                 pack("C1C1C1C1VC1C1", 0x1f, 0x8b, 8, 0, time(), 2, 0xFF) .
