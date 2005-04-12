@@ -4,6 +4,7 @@
  *
  * @package PHP_Archive
  * @category PHP
+ * @todo finish opendir/readdir/rewinddir/closedir code
  */
 
 /**
@@ -227,9 +228,17 @@ class PHP_Archive {
         } else {
             $test = false;
         }
-        while (strpos($this->archiveName, 'phar://') === 0 &&
-                (!$test || !strpos($this->archiveName, $test))) {
+        while (count($aname)) {
             $this->archiveName = array_pop($aname);
+            if (strpos($this->archiveName, 'phar://') === false) {
+                if ($test) {
+                    if (strpos($this->archiveName, $test)) {
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            }
         }
         if ($test && $this->archiveName != 'phar://') {
             $file = substr($file, strlen($test) + 1);
@@ -299,8 +308,8 @@ class PHP_Archive {
     function stream_read($count)
     {
         $ret = substr($this->file, $this->position, $count);
-		$this->position += strlen($ret);
-		return $ret;
+        $this->position += strlen($ret);
+        return $ret;
     }
     
     /**
@@ -308,43 +317,55 @@ class PHP_Archive {
      */
     
     function stream_eof()
-	{
-		return $this->position >= strlen($this->file);
-	}
-	
-	/**
-	 * For seeking the stream, does nothing
-	 */
-	
-	function stream_seek() {
-	    return true;
-	}
-	
-	/**
-	 * The current position in the stream
-	 */
-	
-	function stream_tell() {
-	    return $this->position;
-	}
-	
-	/**
-	 * The result of an fstat call, returns mod time from tar, and file size
-	 */
-	
-	function stream_stat() {
-	    return array(
-	       'mtime' => $this->currentStat[9],
-	       'atime' => $this->currentStat[9],
-	       'ctime' => $this->currentStat[9],
-	       'size' => strlen($this->file),
-	       );
-	}
+    {
+        return $this->position >= strlen($this->file);
+    }
+    
+    /**
+     * For seeking the stream
+     */
+    
+    function stream_seek($pos) {
+        $this->position = $pos;
+        return true;
+    }
+    
+    /**
+     * The current position in the stream
+     */
+    
+    function stream_tell() {
+        return $this->position;
+    }
 
-	function APIVersion()
-	{
-	    return '0.5';
-	}
+    /**
+     * The result of an fstat call, returns mod time from tar, and file size
+     */
+    
+    function stream_stat() {
+        return array(
+           'size' => strlen($this->file),
+           'atime' => $this->currentStat[9],
+           'mtime' => $this->currentStat[9],
+           'ctime' => $this->currentStat[9],
+           );
+    }
+
+    /**
+     * Open a directory in the .phar for reading
+     */
+    function dir_opendir($path)
+    {
+        $path = $this->initializeStream($path);
+        if ($this->archiveName == 'phar://') {
+            trigger_error('Error: Unknown phar in "' . $file . '"', E_USER_ERROR);
+        }
+    }
+
+    function APIVersion()
+    {
+        return '0.5';
+    }
 }
 
 ?>
