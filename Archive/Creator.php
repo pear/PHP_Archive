@@ -120,7 +120,7 @@ PHP;
         if (!$allow_direct_access) {
             $unpack_code .= <<<PHP
 
-require_once 'phar://$init_file';
+require_once 'phar://' . basename(__FILE__) . '/$init_file';
 PHP;
         } else {
             if ($allow_direct_access) {
@@ -171,19 +171,9 @@ PHP;
      * @return boolean
      */
     
-    function addFile($file, $save_path)
+    function addFile($file, $save_path, $magicrequire = false)
     {
-        $file_contents = file_get_contents($file);
-        if ($this->compress) {
-            $file_contents = '1' . base64_encode(
-                pack("C1C1C1C1VC1C1", 0x1f, 0x8b, 8, 0, time(), 2, 0xFF) .
-                gzdeflate($file_contents, 9) .
-                pack("VV",crc32($file_contents),strlen($file_contents)));
-        } else {
-            $file_contents = '0' . $file_contents;
-        }
-        clearstatcache(); // a newly created archive could be erased if this is not performed
-        return $this->tar->addString($save_path, $file_contents);
+        return $this->addString(file_get_contents($file), $save_path, $magicrequire);
     }
 
     /**
@@ -194,8 +184,14 @@ PHP;
      * @return boolean
      */
     
-    function addString($file_contents, $save_path)
+    function addString($file_contents, $save_path, $magicrequire = false)
     {
+        if ($magicrequire) {
+            $file_contents = str_replace("require_once '", "require_once 'phar://$magicrequire/",
+                $file_contents);
+            $file_contents = str_replace("include_once '", "include_once 'phar://$magicrequire/",
+                $file_contents);
+        }
         if ($this->compress) {
             $file_contents = '1' . base64_encode(
                 pack("C1C1C1C1VC1C1", 0x1f, 0x8b, 8, 0, time(), 2, 0xFF) .
@@ -401,18 +397,20 @@ PHP;
     /**
      * Add a directory to the archive
      *
-     * @param string $dir The directory path to add
-     * @param array files to ignore
-     * @param array files to include (all others ignored)
+     * @param string The directory path to add
+     * @param array  files to ignore
+     * @param array  files to include (all others ignored)
+     * @param bool   If set, then "require_once '" will be replaced with
+     *               "require_once 'phar://$magicrequire/"
      * @return boolean
      */
     
-    function addDir($dir, $ignore = array(), $include = array())
+    function addDir($dir, $ignore = array(), $include = array(), $magicrequire = false)
     {
         $this->_setupIgnore($ignore, 1);
         $this->_setupIgnore($include, 0);
         $list = $this->dirList($dir);
-        return $this->addArray($list);
+        return $this->addArray($list, $magicrequire);
     }
     
     /**
@@ -422,14 +420,13 @@ PHP;
      * @return boolean
      */
      
-    function addArray($files)
+    function addArray($files, $magicrequire = false)
     {
         if (!is_array($files) || empty($files)) {
             return false;
         }
-        $this->modified = true;
         foreach ($files as $file_path => $save_path) {
-            $returns[] = $this->addFile($file_path, $save_path, $compress);
+            $returns[] = $this->addFile($file_path, $save_path, $magicrequire);
         }
         return !in_array(false, $returns);
     }
