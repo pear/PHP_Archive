@@ -4,9 +4,7 @@
  *
  * @package PHP_Archive
  * @category PHP
- * @todo finish opendir/readdir/rewinddir/closedir code
  */
-
 /**
  * PHP_Archive Class (implements .phar)
  *
@@ -242,6 +240,9 @@ class PHP_Archive {
         }
         if ($test && $this->archiveName != 'phar://') {
             $file = substr($file, strlen($test) + 1);
+            if (!$file) {
+                $file = '/'; // this is for opendir requests
+            }
         }
         return $file;
     }
@@ -325,7 +326,8 @@ class PHP_Archive {
      * For seeking the stream
      */
     
-    function stream_seek($pos) {
+    function stream_seek($pos)
+    {
         $this->position = $pos;
         return true;
     }
@@ -334,16 +336,32 @@ class PHP_Archive {
      * The current position in the stream
      */
     
-    function stream_tell() {
+    function stream_tell()
+    {
         return $this->position;
     }
 
     /**
      * The result of an fstat call, returns mod time from tar, and file size
      */
-    
-    function stream_stat() {
+
+    function stream_stat()
+    {
+        return $this->_stream_stat();
+    }
+
+    function _stream_stat($url = null)
+    {
+        $std = $url ? $this->_processFile($url) : $this->currentFilename;
+        $isdir = strncmp($std . '/', $this->currentFilename, strlen($std) + 1) == 0;
+        $mode = $isdir ? 0040444 : 0100444;
+        // 040000 = dir, 010000 = file
+        // everything is readable, nothing is writeable
         return array(
+           0, 0, $mode, 0, 0, 0, 0, 0, 0, 0, 0, 0, // non-associative indices
+           'dev' => 0, 'ino' => 0,
+           'mode' => $mode,
+           'nlink' => 0, 'uid' => 0, 'gid' => 0, 'rdev' => 0, 'blksize' => 0, 'blocks' => 0,
            'size' => strlen($this->file),
            'atime' => $this->currentStat[9],
            'mtime' => $this->currentStat[9],
@@ -351,15 +369,83 @@ class PHP_Archive {
            );
     }
 
+    function url_stat($url, $flags)
+    {
+        $url = substr($url, 7);
+        $path = $this->initializeStream($url);
+        $this->_file = @fopen($this->archiveName, "rb");
+        if (!$this->_file) {
+            return array('Error: cannot open phar "' . $this->archiveName . '"');
+        }
+        if (($e = $this->_selectFile($path)) === true) {
+            @fclose($this->_file);
+        }
+        return $this->_stream_stat($path);
+    }
+
     /**
      * Open a directory in the .phar for reading
      */
     function dir_opendir($path)
     {
+        $info = parse_url($path);
+        $path = !empty($info['path']) ?
+            'phar://' . $info['host'] . $info['path'] : $info['host'] . '/';
         $path = $this->initializeStream($path);
         if ($this->archiveName == 'phar://') {
             trigger_error('Error: Unknown phar in "' . $file . '"', E_USER_ERROR);
+            return false;
         }
+        $this->_file = @fopen($this->archiveName, "rb");
+        if (!$this->_file) {
+            return array('Error: cannot open phar "' . $this->archiveName . '"');
+        }
+        $this->_dirFiles = array();
+        while (($error = $this->_nextFile()) === true) {
+            if (strpos($this->currentFilename, '#PHP_ARCHIVE_HEADER-0.5.0.php')) {
+                continue;
+            }
+            if ($path == '/') {
+                if (strpos($this->currentFilename, '/')) {
+                    $this->_dirFiles[array_unshift(explode('/', $this->currentFilename))] = true;
+                } else {
+                    $this->_dirFiles[$this->currentFilename] = true;
+                }
+            } elseif (strpos($this->currentFilename, $path) === 0) {
+                $fname = substr($this->currentFilename, strlen($path) + 1);
+                if (strpos($fname, '/')) {
+                    $this->_dirFiles[array_unshift(explode('/', $fname))] = true;
+                } else {
+                    $this->_dirFiles[$fname] = true;
+                }
+            }
+        }
+        @fclose($this->_file);
+        @uksort($this->_dirFiles, 'strnatcmp');
+        return true;
+    }
+
+    function dir_readdir()
+    {
+        $ret = key($this->_dirFiles);
+        @next($this->_dirFiles);
+        if (!$ret) {
+            return false;
+        }
+        return $ret;
+    }
+
+    function dir_closedir()
+    {
+        $this->_dirFiles = array();
+        reset($this->_dirFiles);
+        return true;
+    }
+
+    function dir_rewinddir()
+    {
+        reset($this->_dirFiles);
+        return true;
     }
 
     function APIVersion()
