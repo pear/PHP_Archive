@@ -11,6 +11,7 @@ $notes = <<<EOT
  * bundle PHP_Archive in all created .phars - standalone! Only
    compressed .phars have a dep on zlib
  * Add support for filenames > 100 characters in length and unit test
+ * Add full support for stat()/is_file()/is_dir()/is_readable() etc., opendir()/readdir()
 EOT;
 
 $description =<<<EOT

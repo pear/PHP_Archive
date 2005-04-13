@@ -21,7 +21,7 @@
   </maintainers>
  <release>
   <version>0.5.0</version>
-  <date>2005-04-09</date>
+  <date>2005-04-12</date>
   <license>PHP License</license>
   <state>alpha</state>
   <notes>* Full support for multiple .phars! phar://pharname.phar/file
@@ -32,6 +32,7 @@
  * bundle PHP_Archive in all created .phars - standalone! Only
    compressed .phars have a dep on zlib
  * Add support for filenames &gt; 100 characters in length and unit test
+ * Add full support for stat()/is_file()/is_dir()/is_readable() etc., opendir()/readdir()
   </notes>
   <deps>
    <dep type="php" rel="ge" version="4.3.0" optional="no"/>
@@ -122,7 +123,7 @@
  <changelog>
    <release>
     <version>0.5.0</version>
-    <date>2005-04-09</date>
+    <date>2005-04-12</date>
     <license>PHP License</license>
     <state>alpha</state>
     <notes>* Full support for multiple .phars! phar://pharname.phar/file
@@ -133,6 +134,7 @@
  * bundle PHP_Archive in all created .phars - standalone! Only
    compressed .phars have a dep on zlib
  * Add support for filenames &gt; 100 characters in length and unit test
+ * Add full support for stat()/is_file()/is_dir()/is_readable() etc., opendir()/readdir()
     </notes>
    </release>
    <release>
