@@ -49,9 +49,11 @@ $commandcontents = file_get_contents($peardir . DIRECTORY_SEPARATOR . 'PEAR' .
 $commandcontents = str_replace(
     array(
         "include_once ",
+        'PEAR_Frontend::isIncludeable($file)',
     ),
     array(
         "include_once 'phar://PEAR.phar/' . ",
+        'PEAR_Frontend::isIncludeable(\'phar://PEAR.phar/\' . $file)',
     ),
     $commandcontents);
 $creator->addString($commandcontents, 'PEAR/Frontend.php');
