@@ -60,7 +60,7 @@ function cmdHelp($command)
         return $ret;
 
     } elseif ($command == "version") {
-        return "PEAR Version: ".$GLOBALS['pear_package_version'].
+        return "PEAR Version: @PEARVER@".
                "\nPHP Version: ".phpversion().
                "\nZend Engine Version: ".zend_version().
                "\nRunning on: ".php_uname();
