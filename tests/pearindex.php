@@ -133,7 +133,10 @@ foreach ($opts as $opt) {
     }
 }
 
-PEAR_Command::setFrontendType($fetype);
+$a = PEAR_Command::setFrontendType($fetype);
+if (PEAR::isError($a)) {
+    die($a->getMessage());
+}
 $ui = &PEAR_Command::getFrontendObject();
 $config = &PEAR_Config::singleton($pear_user_config, $pear_system_config);
 $ui->setConfig($config);
