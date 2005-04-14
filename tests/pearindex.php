@@ -1,4 +1,5 @@
 <?php
+PHP_Archive::cacheStat('PEAR.phar');
 // {{{ usage()
 
 function usage($error = null, $helpsubject = null)
