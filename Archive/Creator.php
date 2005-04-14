@@ -108,6 +108,7 @@ class PHP_Archive_Creator {
         
         
 
+error_reporting(E_ERROR | E_WARNING | E_PARSE | E_NOTICE);
 if (!class_exists('PHP_Archive')) {
 $contents
 }
@@ -115,6 +116,7 @@ if (PHP_Archive::APIVersion() != '0.5') {
 die('Error: PHP_Archive must be API version 0.5 - use bundled PHP_Archive for success');
 }
 @ini_set('memory_limit', -1);
+if (!function_exists('stream_get_wrappers')) function stream_get_wrappers(){return array();}
 if (!in_array('phar', stream_get_wrappers())) {
     stream_wrapper_register('phar', 'PHP_Archive');
 }
