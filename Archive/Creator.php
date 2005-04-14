@@ -96,6 +96,8 @@ class PHP_Archive_Creator {
         $tar = new Archive_Tar($this->temp_path);
         $contents = trim(str_replace(array('<?php', '?>'), array('', ''),
             file_get_contents(dirname(dirname(__FILE__)) . DIRECTORY_SEPARATOR . 'Archive.php')));
+        // make sure .phars added to CVS don't get checksum errors because of CVS tags
+        $contents = str_replace('* @version $Id', '* @version Id', $contents);
         $unpack_code = <<<PHP
         
         
