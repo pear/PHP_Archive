@@ -25,57 +25,57 @@
  */
  
 class PHP_Archive {
-    
+    /**
+     * @var string Current phar basename (like PEAR.phar)
+     */
+    var $_basename;
     /**
      * @var string Archive filename
      */
-
     var $archiveName = null;
-
     /**
      * Current Stat info of the current file in the tar
      */
-
     var $currentStat = null;
-
     /**
      * Current file name in the tar
      * @var string
      */
-
     var $currentFilename = null;
-
     /**
      * Length of the current tar file
      * @var int
      */
-
     var $internalFileLength = 0;
-
     /**
      * Length of the current tar file's footer
      * @var int
      */
-
     var $footerLength = 0;
-
     /**
      * @var string Content of the file being requested
      */
-    
     var $file = null;
-
     /**
      * @var resource|null Pointer to open .phar
      */
-    
     var $_file = null;
-    
     /**
      * @var int Current Position of the pointer
      */
-    
     var $position = 0;
+
+    /**
+     * @param string basename of the phar to cache stat from.
+     * @static
+     */
+    function cacheStat($pharname)
+    {
+        if (!isset($GLOBALS['_PHP_ARCHIVE_CACHE'])) {
+            $GLOBALS['_PHP_ARCHIVE_CACHE'] = array();
+        }
+        $GLOBALS['_PHP_ARCHIVE_CACHE'][$pharname] = array();
+    }
 
     function _processFile($path)
     {
@@ -95,10 +95,14 @@ class PHP_Archive {
     function _selectFile($path)
     {
         $std = $this->_processFile($path);
+        $this->_index = 0;
         while (($error = $this->_nextFile()) === true) {
             if (empty($std) || $std == $this->currentFilename ||
                   //$std is a directory
                   strncmp($std.'/', $this->currentFilename, strlen($std)+1) == 0) {
+                if (isset($this->cachedFpos)) {
+                    @fseek($this->_file, $this->cachedFpos);
+                }
                 return true;
             }
         }
@@ -135,6 +139,24 @@ class PHP_Archive {
 
     function _nextFile()
     {
+        if (isset($GLOBALS['_PHP_ARCHIVE_CACHE']) &&
+              isset($GLOBALS['_PHP_ARCHIVE_CACHE'][$this->_basename]) &&
+              isset($GLOBALS['_PHP_ARCHIVE_CACHE'][$this->_basename][$this->_index])) {
+            $this->currentFilename =
+                $GLOBALS['_PHP_ARCHIVE_CACHE'][$this->_basename][$this->_index]['file'];
+            $this->currentStat =
+                $GLOBALS['_PHP_ARCHIVE_CACHE'][$this->_basename][$this->_index]['stat'];
+            $this->internalFileLength =
+                $GLOBALS['_PHP_ARCHIVE_CACHE'][$this->_basename][$this->_index]['length'];
+            $this->cachedFpos = $GLOBALS['_PHP_ARCHIVE_CACHE'][$this->_basename][$this->_index]['fpos'];
+            $this->footerLength =
+                $GLOBALS['_PHP_ARCHIVE_CACHE'][$this->_basename][$this->_index]['footerlen'];
+            $this->_index++;
+            return true;
+        }
+        if (isset($this->cachedFpos)) {
+            @fseek($this->_file, $this->cachedFpos);
+        }
         @fread($this->_file, $this->internalFileLength + $this->footerLength);
         $rawHeader = @fread($this->_file, 512);
         $header = $this->_processHeader($rawHeader);
@@ -189,6 +211,19 @@ class PHP_Archive {
             return 'Error: phar "' .
                 $this->archiveName . '" Checksum error on entry "' . $this->currentFilename . '"';
         }
+        if (isset($GLOBALS['_PHP_ARCHIVE_CACHE']) &&
+              isset($GLOBALS['_PHP_ARCHIVE_CACHE'][$this->_basename])) {
+            $GLOBALS['_PHP_ARCHIVE_CACHE'][$this->_basename][] =
+                array(
+                    'file' => $this->currentFilename,
+                    'stat' => $this->currentStat,
+                    'length' => $this->internalFileLength,
+                    'fpos' => @ftell($this->_file),
+                    'footerlen' => $this->footerLength,
+                );
+            $this->cachedFpos = null;
+        }
+        $this->_index++;
         return true;
     }
 
@@ -239,6 +274,7 @@ class PHP_Archive {
             }
         }
         if ($test && $this->archiveName != 'phar://') {
+            $this->_basename = $test;
             $file = substr($file, strlen($test) + 1);
             if (!$file) {
                 $file = '/'; // this is for opendir requests
