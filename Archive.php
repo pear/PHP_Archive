@@ -61,6 +61,10 @@ class PHP_Archive {
      */
     var $_file = null;
     /**
+     * @var int length of the current archive
+     */
+    var $_filelen = null;
+    /**
      * @var int Current Position of the pointer
      */
     var $position = 0;
@@ -105,6 +109,9 @@ class PHP_Archive {
                 }
                 return true;
             }
+        }
+        if (@ftell($this->_file) >= $this->_filelen) {
+            return 'Error: "' . $path . '" not found in phar "' . $this->_basename . '"';
         }
         return $error;
     }
@@ -230,6 +237,8 @@ class PHP_Archive {
     function extractFile($path)
     {
         $this->_file = @fopen($this->archiveName, "rb");
+        $stat = fstat($this->_file);
+        $this->_filelen = $stat['size'];
         if (!$this->_file) {
             return array('Error: cannot open phar "' . $this->archiveName . '"');
         }
