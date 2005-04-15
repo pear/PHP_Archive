@@ -1,4 +1,27 @@
 <?php
+if (version_compare(phpversion(), '5.0.0', '<')) {
+    die('Error - PEAR requires streams support of PHP 5.0.0 or newer');
+}
+function testerr($type, $m, $file, $line)
+{
+    if ($type == E_STRICT) return;
+    $errortype = array (
+        E_ERROR   =>  "Error",
+        E_WARNING   =>  "Warning",
+        E_PARSE   =>  "Parsing Error",
+        E_NOTICE   =>  "Notice",
+        E_CORE_ERROR  =>  "Core Error",
+        E_CORE_WARNING  =>  "Core Warning",
+        E_COMPILE_ERROR  =>  "Compile Error",
+        E_COMPILE_WARNING =>  "Compile Warning",
+        E_USER_ERROR =>  "User Error",
+        E_USER_WARNING =>  "User Warning",
+        E_USER_NOTICE =>  "User Notice"
+    );
+    $errortype = $errortype[$type];
+    print "$errortype: $m in $file on $line\n";
+}
+//set_error_handler('testerr');
 PHP_Archive::cacheStat('PEAR.phar');
 // {{{ usage()
 
