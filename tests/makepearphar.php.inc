@@ -54,7 +54,7 @@ $commandcontents = str_replace(
     ),
     array(
         "include_once 'phar://PEAR.phar/' . ",
-        'PEAR_Frontend::isIncludeable(\'phar://PEAR.phar/\' . $file)',
+        'true',
     ),
     $commandcontents);
 $creator->addString($commandcontents, 'PEAR/Frontend.php');
