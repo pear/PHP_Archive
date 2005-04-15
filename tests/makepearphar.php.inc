@@ -1,5 +1,6 @@
 <?php
 $peardir = 'C:\devel\pear_with_channels';
+$xmlrpcdir = 'C:\php5\pear\XML';
 
 require_once 'PEAR/PackageFile.php';
 require_once 'PEAR/Config.php';
@@ -172,6 +173,7 @@ $commandcontents = str_replace(
     $commandcontents);
 $creator->addString($commandcontents, 'PEAR/PackageFile.php');
 
+$creator->addFile($xmlrpcdir . DIRECTORY_SEPARATOR . 'RPC.php', 'XML/RPC.php', true);
 $creator->addFile($peardir . DIRECTORY_SEPARATOR . 'template.spec', 'PEAR/template.spec');
 $creator->addDir($peardir, array('tests/',
     'PEAR/Builder.php',
