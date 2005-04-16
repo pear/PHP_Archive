@@ -2,15 +2,32 @@
 $peardir = 'C:\devel\pear_with_channels';
 $xmlrpcdir = 'C:\php5\pear\XML';
 
+require_once $peardir . DIRECTORY_SEPARATOR . 'go-pear-list.php';
+foreach ($packages as $package => $ver) {
+    $packages[$package] = "$package-$ver";
+}
 require_once 'PEAR/PackageFile.php';
 require_once 'PEAR/Config.php';
+require_once 'PEAR/Downloader.php';
+require_once 'PEAR/Installer.php';
+require_once 'PEAR/Frontend.php';
 require_once 'PHP/Archive/Creator.php';
 $config = &PEAR_Config::singleton();
+$ui = &PEAR_Frontend::singleton('PEAR_Frontend_CLI');
+
+$dl = &new PEAR_Downloader($ui, array('downloadonly' => true, 'nodeps' => true), $config);
+$dl->setDownloadDir(dirname(__FILE__));
+$res = &$dl->download(array_values($packages));
+
 $pkg = &new PEAR_PackageFile($config);
 $pf = $pkg->fromPackageFile($peardir . DIRECTORY_SEPARATOR . 'package2.xml', PEAR_VALIDATE_NORMAL);
 $pearver = $pf->getVersion();
 
 $creator = new PHP_Archive_Creator('index.php', true);
+foreach ($packages as $package => $name) {
+    $creator->addFile("$name.tgz", "packages/$name.tgz");
+    @unlink("$name.tgz");
+}
 $commandcontents = file_get_contents(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'pearindex.php');
 $commandcontents = str_replace('@PEARVER@', $pearver, $commandcontents);
 $creator->addString($commandcontents, 'index.php');
