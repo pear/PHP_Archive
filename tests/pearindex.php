@@ -1,7 +1,4 @@
 <?php
-if (version_compare(phpversion(), '5.0.0', '<')) {
-    die('Error - PEAR requires streams support of PHP 5.0.0 or newer');
-}
 function testerr($type, $m, $file, $line)
 {
     if ($type == E_STRICT) return;
