@@ -151,5 +151,5 @@ closedir($dir);
 echo 'tests done';
 ?>
 --EXPECT--
-phar://opendir.phar/index.phpstring(5) "hello"
+phar://opendir.phar/indexhooha.phpstring(5) "hello"
 tests done
