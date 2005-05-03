@@ -27,7 +27,8 @@ $result = $package->setOptions(array(
     'version'           => $version,
     'state'             => 'alpha',
     'license'           => 'PHP License',
-    'ignore'            => array('package.php', 'package.xml', '*.bak', '*src*', '*.tgz', '*pear_media*', 'index.htm'),
+    'ignore'            => array('package.php', 'package.xml', '*.bak', '*src*',
+        '*.tgz', '*pear_media*', 'index.htm', 'PEAR.phar', 'docs/'),
 	'filelistgenerator' => 'cvs', // other option is 'file'
     'notes'             => $notes,
     'changelogoldtonew' => false,

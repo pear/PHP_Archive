@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE package SYSTEM "http://pear.php.net/dtd/package-1.0">
-<package version="1.0" packagerversion="1.4.0a10">
+<package version="1.0" packagerversion="1.4.0a12">
  <name>PHP_Archive</name>
  <summary>Create and Use PHP Archive files</summary>
  <description>PHP_Archive allows you to create a single .phar file containing an entire application.
@@ -21,7 +21,7 @@
   </maintainers>
  <release>
   <version>0.5.0</version>
-  <date>2005-04-12</date>
+  <date>2005-05-03</date>
   <license>PHP License</license>
   <state>alpha</state>
   <notes>* Full support for multiple .phars! phar://pharname.phar/file
@@ -48,67 +48,43 @@
      <file role="data" name="info.phar"/>
      <file role="php" name="phar_unpack.php"/>
     </dir> <!-- /data -->
-    <dir name="docs">
-     <dir name="examples">
-      <file role="doc" name="PHP_Archive_Creator_Example_1.php"/>
-     </dir> <!-- /docs/examples -->
-     <dir name="media">
-      <file role="doc" name="background.png"/>
-      <file role="doc" name="Crtx.gif"/>
-      <file role="doc" name="empty.png"/>
-      <file role="doc" name="layout.css"/>
-      <file role="doc" name="pear.gif"/>
-      <file role="doc" name="print.css"/>
-      <file role="doc" name="style.css"/>
-     </dir> <!-- /docs/media -->
-     <dir name="PHP_Archive">
-      <file role="doc" name="PHP_Archive.html"/>
-      <file role="doc" name="PHP_Archive_Creator.html"/>
-      <file role="doc" name="_Archive_Archive_Creator_php.html"/>
-      <file role="doc" name="_Archive_Archive_php.html"/>
-      <file role="doc" name="_Archive_data_phar_unpack_php.html"/>
-      <file role="doc" name="_Archive_docs_examples_PHP_Archive_Creator_Example_1_php.html"/>
-      <file role="doc" name="_Archive_docs_examples_PHP_Archive_Creator_Exmaple_1_php.html"/>
-      <file role="doc" name="_Archive_package_php.html"/>
-      <file role="doc" name="_Archive_tests_planet_php_default_phar_php.html"/>
-      <file role="doc" name="_Archive_tests_test_path_php.html"/>
-      <file role="doc" name="_Archive_tests_test_php.html"/>
-     </dir> <!-- /docs/PHP_Archive -->
-     <dir name="__examplesource">
-      <file role="doc" name="exsource_ve_docs_examples_PHP_Archive_Creator_Example_1.php_1d9fab05cd5989e5fb7b2b469b72879c.html"/>
-     </dir> <!-- /docs/__examplesource -->
-     <dir name="__filesource">
-      <file role="doc" name="fsource_PHP_Archive__Archive.php.html"/>
-      <file role="doc" name="fsource_PHP_Archive__ArchiveCreator.php.html"/>
-      <file role="doc" name="fsource_PHP_Archive__dataphar_unpack.php.html"/>
-      <file role="doc" name="fsource_PHP_Archive__docsexamplesPHP_Archive_Creator_Example_1.php.html"/>
-      <file role="doc" name="fsource_PHP_Archive__docsexamplesPHP_Archive_Creator_Exmaple_1.php.html"/>
-      <file role="doc" name="fsource_PHP_Archive__package.php.html"/>
-      <file role="doc" name="fsource_PHP_Archive__testsplanet_phpdefault_phar.php.html"/>
-      <file role="doc" name="fsource_PHP_Archive__teststest.php.html"/>
-      <file role="doc" name="fsource_PHP_Archive__teststest_path.php.html"/>
-     </dir> <!-- /docs/__filesource -->
-     <file role="doc" name="classtrees_PHP_Archive.html"/>
-     <file role="doc" name="elementindex.html"/>
-     <file role="doc" name="elementindex_PHP_Archive.html"/>
-     <file role="doc" name="errors.html"/>
-     <file role="doc" name="index.html"/>
-     <file role="doc" name="li_PHP_Archive.html"/>
-     <file role="doc" name="todolist.html"/>
-    </dir> <!-- /docs -->
     <dir name="tests">
+     <dir name="cachestat">
+      <file role="test" name="cachestat.phar"/>
+      <file role="test" name="makecachestatphar.php.inc"/>
+     </dir> <!-- /tests/cachestat -->
+     <dir name="filenotfound">
+      <file role="test" name="filenotfound.phar"/>
+      <file role="test" name="makefilenotfoundphar.php.inc"/>
+     </dir> <!-- /tests/filenotfound -->
      <dir name="longfilename">
       <file role="test" name="longphar.phar"/>
       <file role="test" name="makelongphar.php.inc"/>
      </dir> <!-- /tests/longfilename -->
+     <dir name="opendir">
+      <file role="test" name="makeopendirphar.php.inc"/>
+      <file role="test" name="opendir.phar"/>
+     </dir> <!-- /tests/opendir -->
      <dir name="planet_php">
       <file role="test" name="default_phar.php"/>
      </dir> <!-- /tests/planet_php -->
+     <file role="test" name="cachestat.phpt"/>
+     <file role="test" name="cachestattest.php"/>
+     <file role="test" name="eof.phpt"/>
+     <file role="test" name="filenotfound.phpt"/>
+     <file role="test" name="filenotfoundtest.php"/>
+     <file role="test" name="gopearphar.php.inc"/>
      <file role="test" name="longfilename.phpt"/>
+     <file role="test" name="makepearphar.php.inc"/>
      <file role="test" name="new_phar.phar"/>
+     <file role="test" name="normalstat.phpt"/>
+     <file role="test" name="opendir.phpt"/>
+     <file role="test" name="pearindex.php"/>
      <file role="test" name="phar.log"/>
      <file role="test" name="phpt_test.php.inc"/>
      <file role="test" name="savetest.php"/>
+     <file role="test" name="seek.phpt"/>
+     <file role="test" name="streamstat.phpt"/>
      <file role="test" name="test.php"/>
      <file role="test" name="test1.php"/>
      <file role="test" name="test_path.php"/>
@@ -123,7 +99,7 @@
  <changelog>
    <release>
     <version>0.5.0</version>
-    <date>2005-04-12</date>
+    <date>2005-05-03</date>
     <license>PHP License</license>
     <state>alpha</state>
     <notes>* Full support for multiple .phars! phar://pharname.phar/file
