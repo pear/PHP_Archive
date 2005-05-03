@@ -300,6 +300,11 @@ class PHP_Archive {
     
     function stream_open($file)
     {
+        return $this->_streamOpen($file);
+    }
+
+    function _streamOpen($file, $searchForDir = false)
+    {
         $path = substr($file, 7);
         $path = $this->initializeStream($path);
         if ($this->archiveName == 'phar://') {
@@ -308,6 +313,15 @@ class PHP_Archive {
         if (is_array($this->file = $this->extractFile($path))) {
             trigger_error($this->file[0], E_USER_ERROR);
             return false;
+        }
+        if ($path != $this->currentFilename) {
+            if (!$searchForDir) {
+                trigger_error("Cannot open '$file', is a directory", E_USER_ERROR);
+                return false;
+            } else {
+                $this->file = '';
+                return true;
+            }
         }
         $compressed = $this->file ? (int) $this->file{0} : false;
         $this->file ? $this->file = substr($this->file, 1) : false;
@@ -364,16 +378,36 @@ class PHP_Archive {
     
     function stream_eof()
     {
-        return $this->position >= strlen($this->file);
+        return !($this->position >= strlen($this->file));
     }
     
     /**
      * For seeking the stream
      */
     
-    function stream_seek($pos)
+    function stream_seek($pos, $whence)
     {
-        $this->position = $pos;
+        switch ($whence) {
+            case SEEK_SET:
+                if ($pos < 0) {
+                    return false;
+                }
+                $this->position = $pos;
+                break;
+            case SEEK_CUR:
+                if ($pos + strlen($this->file) < 0) {
+                    return false;
+                }
+                $this->position += $pos;
+                break;
+            case SEEK_END:
+                if ($pos + strlen($this->file) < 0) {
+                    return false;
+                }
+                $this->position = $pos + strlen($this->file);
+            default:
+                return false;
+        }
         return true;
     }
     
@@ -395,9 +429,9 @@ class PHP_Archive {
         return $this->_stream_stat();
     }
 
-    function _stream_stat($url = null)
+    function _stream_stat($file = null)
     {
-        $std = $url ? $this->_processFile($url) : $this->currentFilename;
+        $std = $file ? $this->_processFile($file) : $this->currentFilename;
         $isdir = strncmp($std . '/', $this->currentFilename, strlen($std) + 1) == 0;
         $mode = $isdir ? 0040444 : 0100444;
         // 040000 = dir, 010000 = file
@@ -416,15 +450,9 @@ class PHP_Archive {
 
     function url_stat($url, $flags)
     {
+        $this->_streamOpen($url, true);
         $url = substr($url, 7);
         $path = $this->initializeStream($url);
-        $this->_file = @fopen($this->archiveName, "rb");
-        if (!$this->_file) {
-            return array('Error: cannot open phar "' . $this->archiveName . '"');
-        }
-        if (($e = $this->_selectFile($path)) === true) {
-            @fclose($this->_file);
-        }
         return $this->_stream_stat($path);
     }
 
@@ -435,13 +463,15 @@ class PHP_Archive {
     {
         $info = parse_url($path);
         $path = !empty($info['path']) ?
-            'phar://' . $info['host'] . $info['path'] : $info['host'] . '/';
+            $info['host'] . $info['path'] : $info['host'] . '/';
         $path = $this->initializeStream($path);
         if ($this->archiveName == 'phar://') {
             trigger_error('Error: Unknown phar in "' . $file . '"', E_USER_ERROR);
             return false;
         }
         $this->_file = @fopen($this->archiveName, "rb");
+        $stat = fstat($this->_file);
+        $this->_filelen = $stat['size'];
         if (!$this->_file) {
             return array('Error: cannot open phar "' . $this->archiveName . '"');
         }
@@ -452,7 +482,7 @@ class PHP_Archive {
             }
             if ($path == '/') {
                 if (strpos($this->currentFilename, '/')) {
-                    $this->_dirFiles[array_unshift(explode('/', $this->currentFilename))] = true;
+                    $this->_dirFiles[array_shift(explode('/', $this->currentFilename))] = true;
                 } else {
                     $this->_dirFiles[$this->currentFilename] = true;
                 }
