@@ -81,6 +81,10 @@ class PHP_Archive {
         $GLOBALS['_PHP_ARCHIVE_CACHE'][$pharname] = array();
     }
 
+    /**
+     * @param string
+     * @access private
+     */
     function _processFile($path)
     {
         if ($path == '.') {
@@ -96,6 +100,10 @@ class PHP_Archive {
         }
     }
 
+    /**
+     * Seek in the master archive to a matching file or directory
+     * @param string
+     */
     function _selectFile($path)
     {
         $std = $this->_processFile($path);
@@ -116,6 +124,15 @@ class PHP_Archive {
         return $error;
     }
 
+    /**
+     * Process a raw tar header and extract file name, size, and additional info
+     * @param string contents of the header
+     * @uses $footerLength sets the footer length
+     * @uses $internalFileLength sets the file length, if filename < 100 chars
+     * @uses $currentStat sets the file statistics
+     * @return array|string a string is returned on error
+     * @access private
+     */
     function _processHeader($rawHeader)
     {
         if (strlen($rawHeader) < 512 || $rawHeader == pack("a512", "")) {
@@ -144,6 +161,13 @@ class PHP_Archive {
         return $header;
     }
 
+    /**
+     * Seek to the next file, if any, and verify its integrity
+     * @return boolean|array|string if a cached file is used, true is returned.  False is returned
+     *                       for a directory entry, and the raw header unpacked is returned
+     *                       on seek success.  On error, a string is returned
+     * @access private
+     */
     function _nextFile()
     {
         if (isset($GLOBALS['_PHP_ARCHIVE_CACHE']) &&
@@ -234,6 +258,12 @@ class PHP_Archive {
         return true;
     }
 
+    /**
+     * Seek to a file within the master archive, and extract its contents
+     * @param string
+     * @return array|string an array containing an error message string is returned
+     *                      upon error, otherwise the file contents are returned
+     */
     function extractFile($path)
     {
         $this->_file = @fopen($this->archiveName, "rb");
@@ -253,13 +283,16 @@ class PHP_Archive {
     }
 
     /**
-     * Start the stream
+     * Locate the .phar archive in the include_path and detect the file to open within
+     * the archive.
      *
-     * Opens the PHP Archive, which is the file being called
-     * @param string
-     * @return bool
+     * Possible parameters are phar://filename_within_phar.ext or
+     * phar://pharname.phar/filename_within_phar.ext
+     *
+     * phar://filename_within_phar.ext will simply use the last .phar opened.
+     * @param string a file within the archive
+     * @return string the filename within the .phar to retrieve
      */
-    
     function initializeStream($file)
     {
         $aname = get_included_files();
@@ -293,16 +326,24 @@ class PHP_Archive {
     }
 
     /**
-     * Open the requested file
+     * Open the requested file - PHP streams API
      *
      * @param string $file String provided by the Stream wrapper
+     * @access private
      */
-    
     function stream_open($file)
     {
         return $this->_streamOpen($file);
     }
 
+    /**
+     * @param string filename to opne, or directory name
+     * @param bool if true, a directory will be matched, otherwise only files
+     *             will be matched
+     * @uses trigger_error()
+     * @return bool success of opening
+     * @access private
+     */
     function _streamOpen($file, $searchForDir = false)
     {
         $path = substr($file, 7);
@@ -360,11 +401,11 @@ class PHP_Archive {
     }
     
     /**
-     * Read the data
+     * Read the data - PHP streams API
      *
-     * @param int $count offset of the file to return
+     * @param int
+     * @access private
      */
-    
     function stream_read($count)
     {
         $ret = substr($this->file, $this->position, $count);
@@ -373,18 +414,20 @@ class PHP_Archive {
     }
     
     /**
-     * Whether we've hit the end of the file
+     * Whether we've hit the end of the file - PHP streams API
+     * @access private
      */
-    
     function stream_eof()
     {
         return !($this->position >= strlen($this->file));
     }
     
     /**
-     * For seeking the stream
+     * For seeking the stream - PHP streams API
+     * @param int
+     * @param SEEK_SET|SEEK_CUR|SEEK_END
+     * @access private
      */
-    
     function stream_seek($pos, $whence)
     {
         switch ($whence) {
@@ -412,23 +455,29 @@ class PHP_Archive {
     }
     
     /**
-     * The current position in the stream
+     * The current position in the stream - PHP streams API
+     * @access private
      */
-    
     function stream_tell()
     {
         return $this->position;
     }
 
     /**
-     * The result of an fstat call, returns mod time from tar, and file size
+     * The result of an fstat call, returns mod time from tar, and file size - PHP streams API
+     * @uses _stream_stat()
+     * @access private
      */
-
     function stream_stat()
     {
         return $this->_stream_stat();
     }
 
+    /**
+     * Retrieve statistics on a file or directory within the .phar
+     * @param string file/directory to stat
+     * @access private
+     */
     function _stream_stat($file = null)
     {
         $std = $file ? $this->_processFile($file) : $this->currentFilename;
@@ -448,6 +497,12 @@ class PHP_Archive {
            );
     }
 
+    /**
+     * Stat a closed file or directory - PHP streams API
+     * @param string
+     * @param int
+     * @access private
+     */
     function url_stat($url, $flags)
     {
         $this->_streamOpen($url, true);
@@ -457,7 +512,9 @@ class PHP_Archive {
     }
 
     /**
-     * Open a directory in the .phar for reading
+     * Open a directory in the .phar for reading - PHP streams API
+     * @param string directory name
+     * @access private
      */
     function dir_opendir($path)
     {
@@ -500,6 +557,10 @@ class PHP_Archive {
         return true;
     }
 
+    /**
+     * Read the next directory entry - PHP streams API
+     * @access private
+     */
     function dir_readdir()
     {
         $ret = key($this->_dirFiles);
@@ -510,6 +571,10 @@ class PHP_Archive {
         return $ret;
     }
 
+    /**
+     * Close a directory handle opened with opendir() - PHP streams API
+     * @access private
+     */
     function dir_closedir()
     {
         $this->_dirFiles = array();
@@ -517,15 +582,23 @@ class PHP_Archive {
         return true;
     }
 
+    /**
+     * Rewind to the first directory entry - PHP streams API
+     * @access private
+     */
     function dir_rewinddir()
     {
         reset($this->_dirFiles);
         return true;
     }
 
+    /**
+     * API version of this class
+     * @return string
+     */
     function APIVersion()
     {
-        return '0.5';
+        return '@API-VER@';
     }
 }
 
