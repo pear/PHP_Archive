@@ -1,17 +1,10 @@
 <?php
 require_once 'PEAR/PackageFileManager.php';
 
-$version = '0.5.0';
+$version = '0.6.0';
 $notes = <<<EOT
- * Full support for multiple .phars! phar://pharname.phar/file
-   and phar://phar2.phar/anotherfile will work now
- * Fix gz compression
- * remove Archive_Tar dep for non-creation
- * remove preg dep for non-creation
- * bundle PHP_Archive in all created .phars - standalone! Only
-   compressed .phars have a dep on zlib
- * Add support for filenames > 100 characters in length and unit test
- * Add full support for stat()/is_file()/is_dir()/is_readable() etc., opendir()/readdir()
+ * change error_reporting to E_ALL.  Was stupidly using
+   E_ERROR | E_WARNING | E_PARSE | E_NOTICE
 EOT;
 
 $description =<<<EOT

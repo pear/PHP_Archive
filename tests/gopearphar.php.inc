@@ -15,8 +15,9 @@ require_once 'PHP/Archive/Creator.php';
 $config = &PEAR_Config::singleton();
 $ui = &PEAR_Frontend::singleton('PEAR_Frontend_CLI');
 
-$dl = &new PEAR_Downloader($ui, array('downloadonly' => true, 'nodeps' => true), $config);
-$dl->setDownloadDir(dirname(__FILE__));
+$dl = &new PEAR_Downloader($ui, array('downloadonly' => true, 'nodeps' => true,
+    'nocompress' => true), $config);
+$dl->setDownloadDir(dirname(__FILE__) . '/go-pear-tarballs');
 $res = &$dl->download(array_values($packages));
 
 $pkg = &new PEAR_PackageFile($config);
@@ -188,9 +189,11 @@ $creator->addDir($peardir, array('tests/',
         '*PEAR/PackageFile.php',
         '*PEAR/Registry.php',
         '*PEAR/Remote.php',
+        '*PEAR/Start.php',
         '*PEAR/Validate.php',
         '*PEAR/XMLParser.php',
         'PEAR.php',
+        'go-pear-phar.php',
         '*OS/Guess.php',
         '*Archive/Tar.php',
         '*Console/Getopt.php',

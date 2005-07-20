@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE package SYSTEM "http://pear.php.net/dtd/package-1.0">
-<package version="1.0" packagerversion="1.4.0a12">
+<package version="1.0" packagerversion="1.4.0a13">
  <name>PHP_Archive</name>
  <summary>Create and Use PHP Archive files</summary>
  <description>PHP_Archive allows you to create a single .phar file containing an entire application.
@@ -20,19 +20,12 @@
   </maintainer>
   </maintainers>
  <release>
-  <version>0.5.0</version>
-  <date>2005-05-03</date>
+  <version>0.6.0</version>
+  <date>2005-07-20</date>
   <license>PHP License</license>
   <state>alpha</state>
-  <notes>* Full support for multiple .phars! phar://pharname.phar/file
-   and phar://phar2.phar/anotherfile will work now
- * Fix gz compression
- * remove Archive_Tar dep for non-creation
- * remove preg dep for non-creation
- * bundle PHP_Archive in all created .phars - standalone! Only
-   compressed .phars have a dep on zlib
- * Add support for filenames &gt; 100 characters in length and unit test
- * Add full support for stat()/is_file()/is_dir()/is_readable() etc., opendir()/readdir()
+  <notes>* change error_reporting to E_ALL.  Was stupidly using
+   E_ERROR | E_WARNING | E_PARSE | E_NOTICE
   </notes>
   <deps>
    <dep type="php" rel="ge" version="4.3.0" optional="no"/>
@@ -97,6 +90,15 @@
   </filelist>
  </release>
  <changelog>
+   <release>
+    <version>0.6.0</version>
+    <date>2005-07-20</date>
+    <license>PHP License</license>
+    <state>alpha</state>
+    <notes>* change error_reporting to E_ALL.  Was stupidly using
+   E_ERROR | E_WARNING | E_PARSE | E_NOTICE
+    </notes>
+   </release>
    <release>
     <version>0.5.0</version>
     <date>2005-05-03</date>

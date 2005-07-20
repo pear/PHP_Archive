@@ -108,7 +108,7 @@ class PHP_Archive_Creator {
         
         
 
-error_reporting(E_ERROR | E_WARNING | E_PARSE | E_NOTICE);
+error_reporting(E_ALL);
 if (!class_exists('PHP_Archive')) {
 $contents
 }
