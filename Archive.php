@@ -549,7 +549,7 @@ class PHP_Archive {
             }
             if ($path == '/') {
                 if (strpos($this->currentFilename, '/')) {
-                    $this->_dirFiles[array_shift(explode('/', $this->currentFilename))] = true;
+                    $this->_dirFiles[array_shift($a = explode('/', $this->currentFilename))] = true;
                 } else {
                     $this->_dirFiles[$this->currentFilename] = true;
                 }
