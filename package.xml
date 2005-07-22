@@ -21,11 +21,15 @@
   </maintainers>
  <release>
   <version>0.6.0</version>
-  <date>2005-07-20</date>
+  <date>2005-07-21</date>
   <license>PHP License</license>
   <state>alpha</state>
-  <notes>* change error_reporting to E_ALL.  Was stupidly using
+  <notes>Bugfix release
+ * change error_reporting to E_ALL.  Was stupidly using
    E_ERROR | E_WARNING | E_PARSE | E_NOTICE
+ * change __HALT_PHP_PARSER__ to __HALT_COMPILER()
+ * rework fread() usage to avoid all potential bugs with chunks
+   larger than 8192
   </notes>
   <deps>
    <dep type="php" rel="ge" version="4.3.0" optional="no"/>
@@ -61,6 +65,10 @@
      <dir name="planet_php">
       <file role="test" name="default_phar.php"/>
      </dir> <!-- /tests/planet_php -->
+     <dir name="require_once">
+      <file role="test" name="makerequire_oncephar.php.inc"/>
+      <file role="test" name="require_once.phar"/>
+     </dir> <!-- /tests/require_once -->
      <file role="test" name="cachestat.phpt"/>
      <file role="test" name="cachestattest.php"/>
      <file role="test" name="eof.phpt"/>
@@ -75,6 +83,7 @@
      <file role="test" name="pearindex.php"/>
      <file role="test" name="phar.log"/>
      <file role="test" name="phpt_test.php.inc"/>
+     <file role="test" name="require_once.phpt"/>
      <file role="test" name="savetest.php"/>
      <file role="test" name="seek.phpt"/>
      <file role="test" name="streamstat.phpt"/>
@@ -83,6 +92,7 @@
      <file role="test" name="test_path.php"/>
      <file role="test" name="test_phar.phar"/>
      <file role="test" name="test_phar2.phar"/>
+     <file role="test" name="test_require.php"/>
      <file role="test" name="test_tar.tar"/>
     </dir> <!-- /tests -->
     <file role="php" name="Archive.php"/>
@@ -92,11 +102,15 @@
  <changelog>
    <release>
     <version>0.6.0</version>
-    <date>2005-07-20</date>
+    <date>2005-07-21</date>
     <license>PHP License</license>
     <state>alpha</state>
-    <notes>* change error_reporting to E_ALL.  Was stupidly using
+    <notes>Bugfix release
+ * change error_reporting to E_ALL.  Was stupidly using
    E_ERROR | E_WARNING | E_PARSE | E_NOTICE
+ * change __HALT_PHP_PARSER__ to __HALT_COMPILER()
+ * rework fread() usage to avoid all potential bugs with chunks
+   larger than 8192
     </notes>
    </release>
    <release>

@@ -3,8 +3,12 @@ require_once 'PEAR/PackageFileManager.php';
 
 $version = '0.6.0';
 $notes = <<<EOT
+Bugfix release
  * change error_reporting to E_ALL.  Was stupidly using
    E_ERROR | E_WARNING | E_PARSE | E_NOTICE
+ * change __HALT_PHP_PARSER__ to __HALT_COMPILER()
+ * rework fread() usage to avoid all potential bugs with chunks
+   larger than 8192
 EOT;
 
 $description =<<<EOT
