@@ -188,7 +188,7 @@ class PHP_Archive {
         if (isset($this->cachedFpos)) {
             @fseek($this->_file, $this->cachedFpos);
         }
-        @fread($this->_file, $this->internalFileLength + $this->footerLength);
+        fseek($this->_file, $this->internalFileLength + $this->footerLength, SEEK_CUR);
         $rawHeader = @fread($this->_file, 512);
         $header = $this->_processHeader($rawHeader);
         if (is_string($header)) {
@@ -273,7 +273,17 @@ class PHP_Archive {
             return array('Error: cannot open phar "' . $this->archiveName . '"');
         }
         if (($e = $this->_selectFile($path)) === true) {
-            $data = @fread($this->_file, $this->internalFileLength);
+            $data = '';
+            $count = $this->internalFileLength;
+            while ($count) {
+                if ($count < 8192) {
+                    $data .= @fread($this->_file, $count);
+                    $count = 0;
+                } else {
+                    $count -= 8192;
+                    $data .= @fread($this->_file, 8192);
+                }
+            }
             @fclose($this->_file);
             return $data;
         } else {
