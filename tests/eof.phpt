@@ -14,14 +14,16 @@ require dirname(__FILE__) . DIRECTORY_SEPARATOR . 'cachestat' . DIRECTORY_SEPARA
     'cachestat.phar';
 $phpunit = new PEAR_PHPTest(true);
 $fp = fopen('phar://cachestat.phar/test1.php', 'r');
-var_dump(feof($fp));
+var_dump(feof($fp), ftell($fp));
 fseek($fp, 10000);
-var_dump(feof($fp));
+var_dump(feof($fp), ftell($fp));
 fclose($fp);
 echo 'tests done';
 ?>
 --EXPECT--
 phar://cachestat.phar/test1.phpstring(5) "hello"
 bool(false)
+int(0)
 bool(true)
+int(10000)
 tests done

@@ -147,7 +147,7 @@ if (count(get_included_files()) > 1) {
     exit;
 }
 ?>
-<?php __HALT_PHP_PARSER__; ?>
+<?php __HALT_COMPILER(); ?>
 
 PHP;
         $tar->addString('<?php #PHP_ARCHIVE_HEADER-0.5.0.php', $unpack_code);

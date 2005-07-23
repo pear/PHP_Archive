@@ -46,7 +46,7 @@ $package->addDependency('tokenizer', '', 'has', 'ext', false);*/
 //$package->addDependency('auto');
 $package->addDependency('Archive_Tar', '1.3.1', 'ge', 'pkg', false);
 $package->addDependency('PEAR', '1.3.5', 'ge', 'pkg', false);
-$package->addDependency('php', '4.3.0', 'ge', 'php', false);
+$package->addDependency('php', '5.1.0b1', 'ge', 'php', false);
 
 if (isset($_SERVER['argv'][1]) && $_SERVER['argv'][1] == 'commit') {
     $result = $package->writePackageFile();

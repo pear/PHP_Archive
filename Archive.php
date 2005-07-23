@@ -24,68 +24,68 @@
  * @category PHP
  */
  
-class PHP_Archive {
+class PHP_Archive
+{
     /**
      * @var string Current phar basename (like PEAR.phar)
      */
-    var $_basename;
+    protected $basename;
     /**
      * @var string Archive filename
      */
-    var $archiveName = null;
+    protected $archiveName = null;
     /**
      * Current Stat info of the current file in the tar
      */
-    var $currentStat = null;
+    protected $currentStat = null;
     /**
      * Current file name in the tar
      * @var string
      */
-    var $currentFilename = null;
+    protected $currentFilename = null;
     /**
      * Length of the current tar file
      * @var int
      */
-    var $internalFileLength = 0;
+    protected $internalFileLength = 0;
     /**
      * Length of the current tar file's footer
      * @var int
      */
-    var $footerLength = 0;
+    protected $footerLength = 0;
     /**
      * @var string Content of the file being requested
      */
-    var $file = null;
+    protected $file = null;
     /**
      * @var resource|null Pointer to open .phar
      */
-    var $_file = null;
+    protected $fp = null;
     /**
      * @var int length of the current archive
      */
-    var $_filelen = null;
+    protected $fplen = null;
     /**
      * @var int Current Position of the pointer
      */
-    var $position = 0;
+    protected $position = 0;
 
+    private static $_cache;
     /**
      * @param string basename of the phar to cache stat from.
-     * @static
      */
-    function cacheStat($pharname)
+    public static function cacheStat($pharname)
     {
-        if (!isset($GLOBALS['_PHP_ARCHIVE_CACHE'])) {
-            $GLOBALS['_PHP_ARCHIVE_CACHE'] = array();
+        if (!isset(self::$_cache)) {
+            self::$_cache = array();
         }
-        $GLOBALS['_PHP_ARCHIVE_CACHE'][$pharname] = array();
+        self::$_cache[$pharname] = array();
     }
 
     /**
      * @param string
-     * @access private
      */
-    function _processFile($path)
+    protected function processFile($path)
     {
         if ($path == '.') {
             return '';
@@ -104,22 +104,22 @@ class PHP_Archive {
      * Seek in the master archive to a matching file or directory
      * @param string
      */
-    function _selectFile($path)
+    protected function selectFile($path)
     {
-        $std = $this->_processFile($path);
+        $std = $this->processFile($path);
         $this->_index = 0;
         while (($error = $this->_nextFile()) === true) {
             if (empty($std) || $std == $this->currentFilename ||
                   //$std is a directory
                   strncmp($std.'/', $this->currentFilename, strlen($std)+1) == 0) {
                 if (isset($this->cachedFpos)) {
-                    @fseek($this->_file, $this->cachedFpos);
+                    @fseek($this->fp, $this->cachedFpos);
                 }
                 return true;
             }
         }
-        if (@ftell($this->_file) >= $this->_filelen) {
-            return 'Error: "' . $path . '" not found in phar "' . $this->_basename . '"';
+        if (@ftell($this->fp) >= $this->fplen) {
+            return 'Error: "' . $path . '" not found in phar "' . $this->basename . '"';
         }
         return $error;
     }
@@ -131,9 +131,8 @@ class PHP_Archive {
      * @uses $internalFileLength sets the file length, if filename < 100 chars
      * @uses $currentStat sets the file statistics
      * @return array|string a string is returned on error
-     * @access private
      */
-    function _processHeader($rawHeader)
+    private function _processHeader($rawHeader)
     {
         if (strlen($rawHeader) < 512 || $rawHeader == pack("a512", "")) {
             return 'Error: phar "' . $this->archiveName . '" has corrupted tar header';
@@ -166,30 +165,29 @@ class PHP_Archive {
      * @return boolean|array|string if a cached file is used, true is returned.  False is returned
      *                       for a directory entry, and the raw header unpacked is returned
      *                       on seek success.  On error, a string is returned
-     * @access private
      */
-    function _nextFile()
+    private function _nextFile()
     {
-        if (isset($GLOBALS['_PHP_ARCHIVE_CACHE']) &&
-              isset($GLOBALS['_PHP_ARCHIVE_CACHE'][$this->_basename]) &&
-              isset($GLOBALS['_PHP_ARCHIVE_CACHE'][$this->_basename][$this->_index])) {
+        if (isset(self::$_cache) &&
+              isset(self::$_cache[$this->basename]) &&
+              isset(self::$_cache[$this->basename][$this->_index])) {
             $this->currentFilename =
-                $GLOBALS['_PHP_ARCHIVE_CACHE'][$this->_basename][$this->_index]['file'];
+                self::$_cache[$this->basename][$this->_index]['file'];
             $this->currentStat =
-                $GLOBALS['_PHP_ARCHIVE_CACHE'][$this->_basename][$this->_index]['stat'];
+                self::$_cache[$this->basename][$this->_index]['stat'];
             $this->internalFileLength =
-                $GLOBALS['_PHP_ARCHIVE_CACHE'][$this->_basename][$this->_index]['length'];
-            $this->cachedFpos = $GLOBALS['_PHP_ARCHIVE_CACHE'][$this->_basename][$this->_index]['fpos'];
+                self::$_cache[$this->basename][$this->_index]['length'];
+            $this->cachedFpos = self::$_cache[$this->basename][$this->_index]['fpos'];
             $this->footerLength =
-                $GLOBALS['_PHP_ARCHIVE_CACHE'][$this->_basename][$this->_index]['footerlen'];
+                self::$_cache[$this->basename][$this->_index]['footerlen'];
             $this->_index++;
             return true;
         }
         if (isset($this->cachedFpos)) {
-            @fseek($this->_file, $this->cachedFpos);
+            @fseek($this->fp, $this->cachedFpos);
         }
-        fseek($this->_file, $this->internalFileLength + $this->footerLength, SEEK_CUR);
-        $rawHeader = @fread($this->_file, 512);
+        fseek($this->fp, $this->internalFileLength + $this->footerLength, SEEK_CUR);
+        $rawHeader = @fread($this->fp, 512);
         $header = $this->_processHeader($rawHeader);
         if (is_string($header)) {
             return $header;
@@ -204,15 +202,15 @@ class PHP_Archive {
             $longFilename = '';
             $n = floor($header['size']/512);
             for ($i=0; $i < $n; $i++) {
-                $content = @fread($this->_file, 512);
+                $content = @fread($this->fp, 512);
                 $longFilename .= $content;
             }
             if (($header['size'] % 512) != 0) {
-                $content = @fread($this->_file, 512);
+                $content = @fread($this->fp, 512);
                 $longFilename .= $content;
             }
             // ----- Read the next header
-            $newHeader = @fread($this->_file, 512);
+            $newHeader = @fread($this->fp, 512);
             $header = $this->_processHeader($newHeader);
             if (is_string($header)) {
                 return $header;
@@ -220,7 +218,7 @@ class PHP_Archive {
             $header['filename'] = trim($longFilename);
             $rawHeader = $newHeader;
         }
-        $this->currentFilename = $this->_processFile($header['path'] . $header['filename']);
+        $this->currentFilename = $this->processFile($header['path'] . $header['filename']);
         $checksum = 8 * ord(" ");
         if (version_compare(phpversion(), '5.0.0', '>=')) {
             $c1 = str_split(substr($rawHeader, 0, 512));
@@ -242,14 +240,14 @@ class PHP_Archive {
             return 'Error: phar "' .
                 $this->archiveName . '" Checksum error on entry "' . $this->currentFilename . '"';
         }
-        if (isset($GLOBALS['_PHP_ARCHIVE_CACHE']) &&
-              isset($GLOBALS['_PHP_ARCHIVE_CACHE'][$this->_basename])) {
-            $GLOBALS['_PHP_ARCHIVE_CACHE'][$this->_basename][] =
+        if (isset(self::$_cache) &&
+              isset(self::$_cache[$this->basename])) {
+            self::$_cache[$this->basename][] =
                 array(
                     'file' => $this->currentFilename,
                     'stat' => $this->currentStat,
                     'length' => $this->internalFileLength,
-                    'fpos' => @ftell($this->_file),
+                    'fpos' => @ftell($this->fp),
                     'footerlen' => $this->footerLength,
                 );
             $this->cachedFpos = null;
@@ -264,30 +262,30 @@ class PHP_Archive {
      * @return array|string an array containing an error message string is returned
      *                      upon error, otherwise the file contents are returned
      */
-    function extractFile($path)
+    public function extractFile($path)
     {
-        $this->_file = @fopen($this->archiveName, "rb");
-        $stat = fstat($this->_file);
-        $this->_filelen = $stat['size'];
-        if (!$this->_file) {
+        $this->fp = @fopen($this->archiveName, "rb");
+        $stat = fstat($this->fp);
+        $this->fplen = $stat['size'];
+        if (!$this->fp) {
             return array('Error: cannot open phar "' . $this->archiveName . '"');
         }
-        if (($e = $this->_selectFile($path)) === true) {
+        if (($e = $this->selectFile($path)) === true) {
             $data = '';
             $count = $this->internalFileLength;
             while ($count) {
                 if ($count < 8192) {
-                    $data .= @fread($this->_file, $count);
+                    $data .= @fread($this->fp, $count);
                     $count = 0;
                 } else {
                     $count -= 8192;
-                    $data .= @fread($this->_file, 8192);
+                    $data .= @fread($this->fp, 8192);
                 }
             }
-            @fclose($this->_file);
+            @fclose($this->fp);
             return $data;
         } else {
-            @fclose($this->_file);
+            @fclose($this->fp);
             return array($e);
         }
     }
@@ -303,7 +301,7 @@ class PHP_Archive {
      * @param string a file within the archive
      * @return string the filename within the .phar to retrieve
      */
-    function initializeStream($file)
+    public function initializeStream($file)
     {
         $aname = get_included_files();
         $this->archiveName = 'phar://';
@@ -326,7 +324,7 @@ class PHP_Archive {
             }
         }
         if ($test && $this->archiveName != 'phar://') {
-            $this->_basename = $test;
+            $this->basename = $test;
             $file = substr($file, strlen($test) + 1);
             if (!$file) {
                 $file = '/'; // this is for opendir requests
@@ -341,7 +339,7 @@ class PHP_Archive {
      * @param string $file String provided by the Stream wrapper
      * @access private
      */
-    function stream_open($file)
+    public function stream_open($file)
     {
         return $this->_streamOpen($file);
     }
@@ -354,7 +352,7 @@ class PHP_Archive {
      * @return bool success of opening
      * @access private
      */
-    function _streamOpen($file, $searchForDir = false)
+    private function _streamOpen($file, $searchForDir = false)
     {
         $path = substr($file, 7);
         $path = $this->initializeStream($path);
@@ -416,7 +414,7 @@ class PHP_Archive {
      * @param int
      * @access private
      */
-    function stream_read($count)
+    public function stream_read($count)
     {
         $ret = substr($this->file, $this->position, $count);
         $this->position += strlen($ret);
@@ -429,7 +427,7 @@ class PHP_Archive {
      */
     function stream_eof()
     {
-        return !($this->position >= strlen($this->file));
+        return $this->position >= strlen($this->file);
     }
     
     /**
@@ -438,7 +436,7 @@ class PHP_Archive {
      * @param SEEK_SET|SEEK_CUR|SEEK_END
      * @access private
      */
-    function stream_seek($pos, $whence)
+    public function stream_seek($pos, $whence)
     {
         switch ($whence) {
             case SEEK_SET:
@@ -468,7 +466,7 @@ class PHP_Archive {
      * The current position in the stream - PHP streams API
      * @access private
      */
-    function stream_tell()
+    public function stream_tell()
     {
         return $this->position;
     }
@@ -478,7 +476,7 @@ class PHP_Archive {
      * @uses _stream_stat()
      * @access private
      */
-    function stream_stat()
+    public function stream_stat()
     {
         return $this->_stream_stat();
     }
@@ -488,9 +486,9 @@ class PHP_Archive {
      * @param string file/directory to stat
      * @access private
      */
-    function _stream_stat($file = null)
+    public function _stream_stat($file = null)
     {
-        $std = $file ? $this->_processFile($file) : $this->currentFilename;
+        $std = $file ? $this->processFile($file) : $this->currentFilename;
         $isdir = strncmp($std . '/', $this->currentFilename, strlen($std) + 1) == 0;
         $mode = $isdir ? 0040444 : 0100444;
         // 040000 = dir, 010000 = file
@@ -513,7 +511,7 @@ class PHP_Archive {
      * @param int
      * @access private
      */
-    function url_stat($url, $flags)
+    public function url_stat($url, $flags)
     {
         $this->_streamOpen($url, true);
         $url = substr($url, 7);
@@ -526,7 +524,7 @@ class PHP_Archive {
      * @param string directory name
      * @access private
      */
-    function dir_opendir($path)
+    public function dir_opendir($path)
     {
         $info = parse_url($path);
         $path = !empty($info['path']) ?
@@ -536,10 +534,10 @@ class PHP_Archive {
             trigger_error('Error: Unknown phar in "' . $file . '"', E_USER_ERROR);
             return false;
         }
-        $this->_file = @fopen($this->archiveName, "rb");
-        $stat = fstat($this->_file);
-        $this->_filelen = $stat['size'];
-        if (!$this->_file) {
+        $this->fp = @fopen($this->archiveName, "rb");
+        $stat = fstat($this->fp);
+        $this->fplen = $stat['size'];
+        if (!$this->fp) {
             return array('Error: cannot open phar "' . $this->archiveName . '"');
         }
         $this->_dirFiles = array();
@@ -562,7 +560,7 @@ class PHP_Archive {
                 }
             }
         }
-        @fclose($this->_file);
+        @fclose($this->fp);
         @uksort($this->_dirFiles, 'strnatcmp');
         return true;
     }
@@ -571,7 +569,7 @@ class PHP_Archive {
      * Read the next directory entry - PHP streams API
      * @access private
      */
-    function dir_readdir()
+    public function dir_readdir()
     {
         $ret = key($this->_dirFiles);
         @next($this->_dirFiles);
@@ -585,7 +583,7 @@ class PHP_Archive {
      * Close a directory handle opened with opendir() - PHP streams API
      * @access private
      */
-    function dir_closedir()
+    public function dir_closedir()
     {
         $this->_dirFiles = array();
         reset($this->_dirFiles);
@@ -596,7 +594,7 @@ class PHP_Archive {
      * Rewind to the first directory entry - PHP streams API
      * @access private
      */
-    function dir_rewinddir()
+    public function dir_rewinddir()
     {
         reset($this->_dirFiles);
         return true;
@@ -606,10 +604,9 @@ class PHP_Archive {
      * API version of this class
      * @return string
      */
-    function APIVersion()
+    public function APIVersion()
     {
         return '0.5';
     }
 }
-
 ?>
