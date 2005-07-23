@@ -606,7 +606,7 @@ class PHP_Archive
      */
     public function APIVersion()
     {
-        return '0.5';
+        return '@API-VER@';
     }
 }
 ?>

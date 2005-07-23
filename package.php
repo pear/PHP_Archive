@@ -1,7 +1,9 @@
 <?php
 require_once 'PEAR/PackageFileManager.php';
-
+require_once 'PEAR/PackageFileManager2.php';
+PEAR::setErrorHAndling(PEAR_ERROR_DIE);
 $version = '0.6.0';
+$apiversion = '0.6';
 $notes = <<<EOT
 Bugfix release
  * change error_reporting to E_ALL.  Was stupidly using
@@ -9,53 +11,44 @@ Bugfix release
  * change __HALT_PHP_PARSER__ to __HALT_COMPILER()
  * rework fread() usage to avoid all potential bugs with chunks
    larger than 8192
+ * drop support for PHP 4.3.x and 5.0.x.  Streams are impossible to
+   fully support due to bugs in all PHP versions < 5.1.0.
 EOT;
 
-$description =<<<EOT
-PHP_Archive allows you to create a single .phar file containing an entire application.
-EOT;
 
-$package = new PEAR_PackageFileManager();
-
-$result = $package->setOptions(array(
-    'package'           => 'PHP_Archive',
-    'summary'           => 'Create and Use PHP Archive files',
-    'description'       => $description,
-    'version'           => $version,
-    'state'             => 'alpha',
-    'license'           => 'PHP License',
+$package = PEAR_PackageFileManager2::importFromPackageFile1(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'package.xml',
+    $options = array(
     'ignore'            => array('package.php', 'package.xml', '*.bak', '*src*',
         '*.tgz', '*pear_media*', 'index.htm', 'PEAR.phar', 'docs/'),
 	'filelistgenerator' => 'cvs', // other option is 'file'
-    'notes'             => $notes,
     'changelogoldtonew' => false,
     'baseinstalldir'    => 'PHP',
-    'packagedirectory'  => '',
+    'packagedirectory'  => dirname(__FILE__),
     'simpleoutput'      => true
     ));
 
-if (PEAR::isError($result)) {
-    echo $result->getMessage();
-    die();
-}
+$package->setReleaseVersion($version);
+$package->setAPIVersion($apiversion);
+$package->setReleaseStability('alpha');
+$package->setAPIStability('alpha');
+$package->setNotes($notes);
+$package->clearDeps();
+$package->addPackageDepWithChannel('required', 'Archive_Tar', 'pear.php.net', '1.3.1');
+$package->addPackageDepWithChannel('required', 'PEAR', 'pear.php.net', '1.3.5');
+$package->setPhpDep('5.1.0b1');
+$package->setPearinstallerDep('1.4.0a12');
+$package->generateContents();
+$package->addReplacement('Archive.php', 'package-info', '@API-VER@', 'api-version');
+$package->addReplacement('Archive/Creator.php', 'package-info', '@API-VER@', 'api-version');
 
-$package->addMaintainer('davey','lead','Davey Shafik','davey@php.net');
-
-/*
-$package->addDependency('tokenizer', '', 'has', 'ext', false);*/
-//$package->addDependency('auto');
-$package->addDependency('Archive_Tar', '1.3.1', 'ge', 'pkg', false);
-$package->addDependency('PEAR', '1.3.5', 'ge', 'pkg', false);
-$package->addDependency('php', '5.1.0b1', 'ge', 'php', false);
-
+$pf1 = $package->exportCompatiblePackageFile1($options);
 if (isset($_SERVER['argv'][1]) && $_SERVER['argv'][1] == 'commit') {
-    $result = $package->writePackageFile();
+    $package->writePackageFile();
+    $pf1->writePackageFile();
 } else {
-    $result = $package->debugPackageFile();
+    $package->debugPackageFile();
+    $pf1->debugPackageFile();
 }
 
-if (PEAR::isError($result)) {
-    echo $result->getMessage();
-    die();
-}
+
 ?>

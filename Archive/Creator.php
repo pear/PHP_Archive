@@ -44,37 +44,37 @@ class PHP_Archive_Creator {
      * @var string The Archive Filename
      */
     
-    var $archive_name;
+    protected $archive_name;
     
     /**
      * @var object An instance of Archive_Tar
      */
     
-    var $tar;
+    protected $tar;
     
     /**
      * @var string The temporary path to the TAR archive
      */
     
-    var $temp_path;
+    protected $temp_path;
     
     /**
      * @var string Where the TAR archive will be saved
      */
     
-    var $save_path;
+    protected $save_path;
     
     /**
      * @var boolean Whether or not the archive should be compressed
      */
     
-    var $compress = false;
+    protected $compress = false;
     
     /**
      * @var boolean Whether or not a file has been added to the archive
      */
      
-    var $modified = false;
+    protected $modified = false;
     
     /**
      * PHP_Archive Constructor
@@ -89,7 +89,8 @@ class PHP_Archive_Creator {
      *                                   then the exact PATH_INFO is used
      * @return void
      */
-    function __construct($init_file = 'index.php', $compress = false, $allow_direct_access = false)
+    public function __construct($init_file = 'index.php', $compress = false,
+                                $allow_direct_access = false)
     {
         $this->compress = $compress;
         $this->temp_path = System::mktemp('phr');
@@ -112,8 +113,8 @@ error_reporting(E_ALL);
 if (!class_exists('PHP_Archive')) {
 $contents
 }
-if (PHP_Archive::APIVersion() != '0.5') {
-die('Error: PHP_Archive must be API version 0.5 - use bundled PHP_Archive for success');
+if (PHP_Archive::APIVersion() != '@API-VER@') {
+die('Error: PHP_Archive must be API version @API-VER@ - use bundled PHP_Archive for success');
 }
 @ini_set('memory_limit', -1);
 if (!function_exists('stream_get_wrappers')) {function stream_get_wrappers(){return array();}}
@@ -154,18 +155,7 @@ PHP;
         
         $this->code = $unpack_code;
         
-        $this->tar =& $tar;
-    }
-    
-    /**
-     * PHP4 Compatible Constructor
-     *
-     * @see PHP_Archive_Creator::__construct
-     */
-    
-    function PHP_Archive_Creator($init_file = 'index.php', $compress = false, $allow_direct_access = false)
-    {
-        $this->__construct($init_file, $compress, $allow_direct_access);
+        $this->tar = $tar;
     }
 
     /**
@@ -176,7 +166,7 @@ PHP;
      * @return boolean
      */
     
-    function addFile($file, $save_path, $magicrequire = false)
+    public function addFile($file, $save_path, $magicrequire = false)
     {
         return $this->addString(file_get_contents($file), $save_path, $magicrequire);
     }
@@ -189,7 +179,7 @@ PHP;
      * @return boolean
      */
     
-    function addString($file_contents, $save_path, $magicrequire = false)
+    public function addString($file_contents, $save_path, $magicrequire = false)
     {
         if ($magicrequire) {
             $file_contents = str_replace("require_once '", "require_once 'phar://$magicrequire/",
@@ -220,9 +210,8 @@ PHP;
      *                            false to include only matches, true to exclude
      *                            all matches
      * @return   bool    true if $path should be ignored, false if it should not
-     * @access private
      */
-    function _checkIgnore($file, $path, $return = 1)
+    private function _checkIgnore($file, $path, $return = 1)
     {
         if (file_exists($path)) {
             $path = realpath($path);
@@ -272,9 +261,8 @@ PHP;
      * Construct the {@link $ignore} array
      * @param array strings of files/paths/wildcards to ignore
      * @param 0|1 0 = files to include, 1 = files to ignore
-     * @access private
      */
-    function _setupIgnore($ignore, $index)
+    private function _setupIgnore($ignore, $index)
     {
         $ig = array();
         if (is_array($ignore)) {
@@ -307,9 +295,8 @@ PHP;
      * Converts $s into a string that can be used with preg_match
      * @param string $s string with wildcards ? and *
      * @return string converts * to .*, ? to ., etc.
-     * @access private
      */
-    function _getRegExpableSearchString($s)
+    private function _getRegExpableSearchString($s)
     {
         $y = '\/';
         if (DIRECTORY_SEPARATOR == '\\') {
@@ -330,11 +317,10 @@ PHP;
      * 
      * Normally, it ignores all files and directories that begin with "."  addhiddenfiles option
      * instead only ignores "." and ".." entries
-     * @access private
      * @param string directory name of entry
      * @param string name
      */
-    function _testFile($directory, $entry)
+    private function _testFile($directory, $entry)
     {
         return is_file($directory . '/' . $entry) ||
               (is_dir($directory . '/' . $entry) && !in_array($entry, array('.', '..')));
@@ -349,7 +335,7 @@ PHP;
      * @return array list of files in a directory
      * @param string $directory full path to the directory you want the list of
      */
-    function dirList($directory, $toplevel = null)
+    public function dirList($directory, $toplevel = null)
     {
         if ($toplevel === null) {
             $toplevel = $directory;
@@ -410,7 +396,7 @@ PHP;
      * @return boolean
      */
     
-    function addDir($dir, $ignore = array(), $include = array(), $magicrequire = false)
+    public function addDir($dir, $ignore = array(), $include = array(), $magicrequire = false)
     {
         $this->_setupIgnore($ignore, 1);
         $this->_setupIgnore($include, 0);
@@ -421,11 +407,12 @@ PHP;
     /**
      * Add an array of files to the archive
      *
-     * @param array $files This is an associative array of the format 'file_to_archive' => 'save_path_in_archive'
+     * @param array $files This is an associative array of the format
+     *                     'file_to_archive' => 'save_path_in_archive'
      * @return boolean
      */
      
-    function addArray($files, $magicrequire = false)
+    public function addArray($files, $magicrequire = false)
     {
         if (!is_array($files) || empty($files)) {
             return false;
@@ -443,8 +430,9 @@ PHP;
      * @return void
      */
     
-    function savePhar($file_path = null)
+    public function savePhar($file_path = null)
     {
+        @unlink($file_path);
         copy($this->temp_path, $file_path);
     }
     
