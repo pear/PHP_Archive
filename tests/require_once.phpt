@@ -12,4 +12,5 @@ echo 'tests done';
 ?>
 --EXPECTF--
 phar://require_once.phar/indexhooha.php
-Fatal error: Error: "nosuchfile.php" not found in phar "require_once.phar" in %s on line 365
+Fatal error: Error: "nosuchfile.php" not found in phar "require_once.phar" in %s on line %s
+PHP Fatal error:  Error: "nosuchfile.php" not found in phar "require_once.phar" in %s on line %s
