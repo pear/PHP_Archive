@@ -110,6 +110,16 @@ $phpunit->assertEquals(array (
     'f' => false,
     'd' => true,
   ),
+  'require_once' => 
+  array (
+    'f' => false,
+    'd' => true,
+  ),
+  'require_once.phpt' => 
+  array (
+    'f' => true,
+    'd' => false,
+  ),
   'savetest.php' => 
   array (
     'f' => true,
@@ -136,6 +146,11 @@ $phpunit->assertEquals(array (
     'd' => false,
   ),
   'test_path.php' => 
+  array (
+    'f' => true,
+    'd' => false,
+  ),
+  'test_require.php' =>
   array (
     'f' => true,
     'd' => false,
