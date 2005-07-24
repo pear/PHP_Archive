@@ -21,7 +21,7 @@
   </maintainers>
  <release>
   <version>0.6.0</version>
-  <date>2005-07-23</date>
+  <date>2005-07-24</date>
   <license>PHP License</license>
   <state>alpha</state>
   <notes>Bugfix release
@@ -45,10 +45,6 @@
       <replace from="@API-VER@" to="api-version" type="package-info"/>
      </file>
     </dir> <!-- /Archive -->
-    <dir name="data">
-     <file role="data" name="info.phar"/>
-     <file role="php" name="phar_unpack.php"/>
-    </dir> <!-- /data -->
     <dir name="tests">
      <dir name="cachestat">
       <file role="test" name="cachestat.phar"/>
@@ -108,7 +104,7 @@
  <changelog>
    <release>
     <version>0.6.0</version>
-    <date>2005-07-23</date>
+    <date>2005-07-24</date>
     <license>PHP License</license>
     <state>alpha</state>
     <notes>Bugfix release

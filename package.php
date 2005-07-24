@@ -18,8 +18,8 @@ EOT;
 
 $package = PEAR_PackageFileManager2::importFromPackageFile1(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'package.xml',
     $options = array(
-    'ignore'            => array('package.php', 'package.xml', '*.bak', '*src*',
-        '*.tgz', '*pear_media*', 'index.htm', 'PEAR.phar', 'docs/'),
+    'ignore'            => array('package.php', 'package.xml', 'package2.xml', '*.bak', '*src*',
+        '*.tgz', '*pear_media*', 'index.htm', 'PEAR.phar', 'docs/', 'phar_unpack.php', 'info.phar'),
 	'filelistgenerator' => 'cvs', // other option is 'file'
     'changelogoldtonew' => false,
     'baseinstalldir'    => 'PHP',

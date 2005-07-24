@@ -21,8 +21,8 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>cellog@php.net</email>
   <active>yes</active>
  </lead>
- <date>2005-07-23</date>
- <time>23:47:42</time>
+ <date>2005-07-24</date>
+ <time>19:52:10</time>
  <version>
   <release>0.6.0</release>
   <api>0.6</api>
@@ -45,10 +45,6 @@ http://pear.php.net/dtd/package-2.0.xsd">
    <dir name="Archive">
     <file name="Creator.php" role="php" />
    </dir> <!-- /Archive -->
-   <dir name="data">
-    <file name="info.phar" role="data" />
-    <file name="phar_unpack.php" role="php" />
-   </dir> <!-- /data -->
    <dir name="tests">
     <dir name="cachestat">
      <file name="cachestat.phar" role="test" />
@@ -133,7 +129,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
     <release>alpha</release>
     <api>alpha</api>
    </stability>
-   <date>2005-07-23</date>
+   <date>2005-07-24</date>
    <license>PHP License</license>
    <notes>Bugfix release
  * change error_reporting to E_ALL.  Was stupidly using
