@@ -188,10 +188,10 @@ PHP;
                 $file_contents);
         }
         if ($this->compress) {
-            $file_contents = '1' . base64_encode(
+            $file_contents = '1' .
                 pack("C1C1C1C1VC1C1", 0x1f, 0x8b, 8, 0, time(), 2, 0xFF) .
                 gzdeflate($file_contents, 9) .
-                pack("VV",crc32($file_contents),strlen($file_contents)));
+                pack("VV",crc32($file_contents),strlen($file_contents));
         } else {
             $file_contents = '0' . $file_contents;
         }

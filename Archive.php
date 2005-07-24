@@ -380,7 +380,6 @@ class PHP_Archive
                     ' for compressed .phars');
                 return false;
             }
-            $this->file = base64_decode($this->file);
             $header = substr($this->file, 0, 10);
             $temp = unpack("Vcrc32/Visize", substr($this->file, -8));
     
