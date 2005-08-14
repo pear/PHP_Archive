@@ -21,8 +21,8 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>cellog@php.net</email>
   <active>yes</active>
  </lead>
- <date>2005-07-24</date>
- <time>19:52:10</time>
+ <date>2005-08-14</date>
+ <time>07:53:59</time>
  <version>
   <release>0.6.0</release>
   <api>0.6</api>
@@ -104,7 +104,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
     <min>5.1.0b1</min>
    </php>
    <pearinstaller>
-    <min>1.4.0a12</min>
+    <min>1.4.0a13</min>
    </pearinstaller>
    <package>
     <name>Archive_Tar</name>
@@ -129,7 +129,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
     <release>alpha</release>
     <api>alpha</api>
    </stability>
-   <date>2005-07-24</date>
+   <date>2005-08-14</date>
    <license>PHP License</license>
    <notes>Bugfix release
  * change error_reporting to E_ALL.  Was stupidly using

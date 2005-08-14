@@ -21,7 +21,7 @@
   </maintainers>
  <release>
   <version>0.6.0</version>
-  <date>2005-07-24</date>
+  <date>2005-08-14</date>
   <license>PHP License</license>
   <state>alpha</state>
   <notes>Bugfix release
@@ -104,7 +104,7 @@
  <changelog>
    <release>
     <version>0.6.0</version>
-    <date>2005-07-24</date>
+    <date>2005-08-14</date>
     <license>PHP License</license>
     <state>alpha</state>
     <notes>Bugfix release

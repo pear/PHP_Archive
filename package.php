@@ -36,7 +36,7 @@ $package->clearDeps();
 $package->addPackageDepWithChannel('required', 'Archive_Tar', 'pear.php.net', '1.3.1');
 $package->addPackageDepWithChannel('required', 'PEAR', 'pear.php.net', '1.3.5');
 $package->setPhpDep('5.1.0b1');
-$package->setPearinstallerDep('1.4.0a12');
+$package->setPearinstallerDep('1.4.0a13');
 $package->generateContents();
 $package->addReplacement('Archive.php', 'package-info', '@API-VER@', 'api-version');
 $package->addReplacement('Archive/Creator.php', 'package-info', '@API-VER@', 'api-version');
