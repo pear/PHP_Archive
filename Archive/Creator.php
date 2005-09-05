@@ -110,7 +110,7 @@ class PHP_Archive_Creator {
         
 
 error_reporting(E_ALL);
-if (version_compare(phpversion(), '5.1.0b1', '<')) {
+if (version_compare(str_replace('-dev', '', phpversion()), '5.1.0b1', '<')) {
 die('Error: .phar files require PHP 5.1 or newer');
 }
 if (!class_exists('PHP_Archive')) {
