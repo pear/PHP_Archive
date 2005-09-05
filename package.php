@@ -7,6 +7,7 @@ $apiversion = '0.6';
 $notes = <<<EOT
 Bugfix release
  * fix faulty dependency on unreleased Archive_Tar
+ * fix version_compare()'s bungling of versioning ending with -dev
 EOT;
 
 

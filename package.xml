@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE package SYSTEM "http://pear.php.net/dtd/package-1.0">
-<package version="1.0" packagerversion="1.4.0a13">
+<package version="1.0" packagerversion="1.4.0b1">
  <name>PHP_Archive</name>
  <summary>Create and Use PHP Archive files</summary>
  <description>PHP_Archive allows you to create a single .phar file containing an entire application.
@@ -20,18 +20,13 @@
   </maintainer>
   </maintainers>
  <release>
-  <version>0.6.0</version>
-  <date>2005-08-14</date>
+  <version>0.6.1</version>
+  <date>2005-09-05</date>
   <license>PHP License</license>
   <state>alpha</state>
   <notes>Bugfix release
- * change error_reporting to E_ALL.  Was stupidly using
-   E_ERROR | E_WARNING | E_PARSE | E_NOTICE
- * change __HALT_PHP_PARSER__ to __HALT_COMPILER()
- * rework fread() usage to avoid all potential bugs with chunks
-   larger than 8192
- * drop support for PHP 4.3.x and 5.0.x.  Streams are impossible to
-   fully support due to bugs in all PHP versions &lt; 5.1.0.
+ * fix faulty dependency on unreleased Archive_Tar
+ * fix version_compare()'s bungling of versioning ending with -dev
   </notes>
   <deps>
    <dep type="php" rel="ge" version="5.1.0b1" optional="no"/>
@@ -102,6 +97,16 @@
   </filelist>
  </release>
  <changelog>
+   <release>
+    <version>0.6.1</version>
+    <date>2005-09-05</date>
+    <license>PHP License</license>
+    <state>alpha</state>
+    <notes>Bugfix release
+ * fix faulty dependency on unreleased Archive_Tar
+ * fix version_compare()'s bungling of versioning ending with -dev
+    </notes>
+   </release>
    <release>
     <version>0.6.0</version>
     <date>2005-08-14</date>

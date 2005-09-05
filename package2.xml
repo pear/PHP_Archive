@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<package packagerversion="1.4.0a13" version="2.0" xmlns="http://pear.php.net/dtd/package-2.0" xmlns:tasks="http://pear.php.net/dtd/tasks-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0
+<package packagerversion="1.4.0b1" version="2.0" xmlns="http://pear.php.net/dtd/package-2.0" xmlns:tasks="http://pear.php.net/dtd/tasks-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0
 http://pear.php.net/dtd/tasks-1.0.xsd
 http://pear.php.net/dtd/package-2.0
 http://pear.php.net/dtd/package-2.0.xsd">
@@ -21,10 +21,10 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>cellog@php.net</email>
   <active>yes</active>
  </lead>
- <date>2005-08-14</date>
- <time>07:53:59</time>
+ <date>2005-09-05</date>
+ <time>15:02:17</time>
  <version>
-  <release>0.6.0</release>
+  <release>0.6.1</release>
   <api>0.6</api>
  </version>
  <stability>
@@ -33,13 +33,8 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>Bugfix release
- * change error_reporting to E_ALL.  Was stupidly using
-   E_ERROR | E_WARNING | E_PARSE | E_NOTICE
- * change __HALT_PHP_PARSER__ to __HALT_COMPILER()
- * rework fread() usage to avoid all potential bugs with chunks
-   larger than 8192
- * drop support for PHP 4.3.x and 5.0.x.  Streams are impossible to
-   fully support due to bugs in all PHP versions &lt; 5.1.0.</notes>
+ * fix faulty dependency on unreleased Archive_Tar
+ * fix version_compare()&apos;s bungling of versioning ending with -dev</notes>
  <contents>
   <dir baseinstalldir="PHP" name="/">
    <dir name="Archive">
@@ -109,7 +104,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
    <package>
     <name>Archive_Tar</name>
     <channel>pear.php.net</channel>
-    <min>1.3.2</min>
+    <min>1.3.1</min>
    </package>
    <package>
     <name>PEAR</name>
@@ -123,14 +118,14 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <release>
    <version>
     <release>0.6.0</release>
-    <api>0.6</api>
+    <api>0.6.0</api>
    </version>
    <stability>
     <release>alpha</release>
     <api>alpha</api>
    </stability>
    <date>2005-08-14</date>
-   <license>PHP License</license>
+   <license uri="http://www.php.net/license">PHP License</license>
    <notes>Bugfix release
  * change error_reporting to E_ALL.  Was stupidly using
    E_ERROR | E_WARNING | E_PARSE | E_NOTICE
@@ -138,7 +133,9 @@ http://pear.php.net/dtd/package-2.0.xsd">
  * rework fread() usage to avoid all potential bugs with chunks
    larger than 8192
  * drop support for PHP 4.3.x and 5.0.x.  Streams are impossible to
-   fully support due to bugs in all PHP versions &lt; 5.1.0.</notes>
+   fully support due to bugs in all PHP versions &lt; 5.1.0.
+    
+   </notes>
   </release>
   <release>
    <version>
@@ -222,6 +219,21 @@ http://pear.php.net/dtd/package-2.0.xsd">
    <notes>First Package
     
    </notes>
+  </release>
+  <release>
+   <version>
+    <release>0.6.1</release>
+    <api>0.6</api>
+   </version>
+   <stability>
+    <release>alpha</release>
+    <api>alpha</api>
+   </stability>
+   <date>2005-09-05</date>
+   <license>PHP License</license>
+   <notes>Bugfix release
+ * fix faulty dependency on unreleased Archive_Tar
+ * fix version_compare()&apos;s bungling of versioning ending with -dev</notes>
   </release>
  </changelog>
 </package>
