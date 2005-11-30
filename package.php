@@ -16,7 +16,7 @@ $package = PEAR_PackageFileManager2::importFromPackageFile1(dirname(__FILE__) . 
     'ignore'            => array('package.php', 'package.xml', 'package2.xml', '*.bak', '*src*',
         '*.tgz', '*pear_media*', 'index.htm', 'PEAR.phar', 'docs/', 'phar_unpack.php', 'info.phar',
         '*CVS*'),
-	'filelistgenerator' => 'file', // other option is 'file'
+	'filelistgenerator' => 'cvs', // other option is 'file'
     'changelogoldtonew' => false,
     'baseinstalldir'    => 'PHP',
     'packagedirectory'  => dirname(__FILE__),

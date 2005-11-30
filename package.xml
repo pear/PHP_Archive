@@ -38,7 +38,6 @@ and processing speed.
      <file role="php" name="Creator.php">
       <replace from="@API-VER@" to="api-version" type="package-info"/>
      </file>
-     <file role="php" name="Creator2.php"/>
     </dir> <!-- /Archive -->
     <dir name="tests">
      <dir name="filenotfound">
@@ -60,6 +59,7 @@ and processing speed.
       <file role="test" name="makerequire_oncephar.php.inc"/>
       <file role="test" name="require_once.phar"/>
      </dir> <!-- /tests/require_once -->
+     <file role="test" name="cachestattest.php"/>
      <file role="test" name="eof.phpt"/>
      <file role="test" name="filenotfound.phpt"/>
      <file role="test" name="filenotfoundtest.php"/>
@@ -87,7 +87,6 @@ and processing speed.
     <file role="php" name="Archive.php">
      <replace from="@API-VER@" to="api-version" type="package-info"/>
     </file>
-    <file role="php" name="Archive2.php"/>
    </dir> <!-- / -->
   </filelist>
  </release>
