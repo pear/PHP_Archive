@@ -27,18 +27,23 @@ if (!class_exists('PHP_Archive')) {
  * @author Davey Shafik <davey@synapticmedia.net>
  * @author Greg Beaver <cellog@php.net>
  * @link http://www.synapticmedia.net Synaptic Media
- * @version Id: Archive.php,v 1.19 2005/07/24 15:42:20 cellog Exp $
+ * @version Id: Archive.php,v 1.20 2005/11/30 05:24:54 cellog Exp $
  * @package PHP_Archive
  * @category PHP
  */
  
 class PHP_Archive
 {
+    /**
+     * Whether this archive is compressed with zlib
+     *
+     * @var bool
+     */
     private $_compressed;
     /**
      * @var string Real path to the .phar archive
      */
-    protected $pharName = null;
+    private $_archiveName = null;
     /**
      * Current file name in the phar
      * @var string
@@ -63,10 +68,50 @@ class PHP_Archive
      */
     protected $position = 0;
 
-    private static $_pharMapping;
-    private static $_manifest;
-    private $basename;
-    private $_fileStart;
+    /**
+     * Map actual realpath to phars to meta-data about the phar
+     *
+     * Data is indexed by the alias that is used by internal files.  In other
+     * words, if a file is included via:
+     * <code>
+     * require_once 'phar://PEAR.phar/PEAR/Installer.php';
+     * </code>
+     * then the alias is "PEAR.phar"
+     * 
+     * Information stored is the actual file name, a boolean indicating whether
+     * this .phar is compressed with zlib, and the precise offset of internal files
+     * within the .phar, used with the {@link $_manifest} to load actual file contents
+     * @var array
+     */
+    private static $_pharMapping = array();
+    /**
+     * File listing for the .phar
+     * 
+     * The manifest is indexed per phar.
+     * 
+     * Files within the .phar are indexed by their relative path within the
+     * .phar.  Each file has this information in its internal array
+     *
+     * - 0 = uncompressed file size
+     * - 1 = timestamp of when file was added to phar
+     * - 2 = offset of file within phar relative to internal file's start
+     * - 3 = compressed file size (actual size in the phar)
+     * @var array
+     */
+    private static $_manifest = array();
+    /**
+     * Absolute offset of internal files within the .phar, indexed by absolute
+     * path to the .phar
+     *
+     * @var array
+     */
+    private static $_fileStart = array();
+    /**
+     * file name of the phar
+     *
+     * @var string
+     */
+    private $_basename;
 
     /**
      * Map a full real file path to an alias used to refer to the .phar
@@ -132,14 +177,14 @@ class PHP_Archive
     protected function selectFile($path, $allowdirs = true)
     {
         $std = self::processFile($path);
-        if (isset(self::$_manifest[$this->basename][$path])) {
+        if (isset(self::$_manifest[$this->_archiveName][$path])) {
             $this->_setCurrentFile($path);
             return true;
         }
         if (!$allowdirs) {
-            return 'Error: "' . $path . '" is not a file in phar "' . $this->basename . '"';
+            return 'Error: "' . $path . '" is not a file in phar "' . $this->_basename . '"';
         }
-        foreach (self::$_manifest[$this->basename] as $file => $info) {
+        foreach (self::$_manifest[$this->_archiveName] as $file => $info) {
             if (empty($std) ||
                   //$std is a directory
                   strncmp($std.'/', $path, strlen($std)+1) == 0) {
@@ -147,7 +192,7 @@ class PHP_Archive
                 return true;
             }
         }
-        return 'Error: "' . $path . '" not found in phar "' . $this->basename . '"';
+        return 'Error: "' . $path . '" not found in phar "' . $this->_basename . '"';
     }
 
     private function _setCurrentFile($path)
@@ -156,15 +201,15 @@ class PHP_Archive
             2 => 0100444, // file mode, readable by all, writeable by none
             4 => 0, // uid
             5 => 0, // gid
-            7 => self::$_manifest[$this->basename][$path][0], // size
-            9 => self::$_manifest[$this->basename][$path][1], // creation time
+            7 => self::$_manifest[$this->_archiveName][$path][0], // size
+            9 => self::$_manifest[$this->_archiveName][$path][1], // creation time
             );
         $this->currentFilename = $path;
         // actual file length in file includes 8-byte header
-        $this->internalFileLength = self::$_manifest[$this->basename][$path][3] - 8;
+        $this->internalFileLength = self::$_manifest[$this->_archiveName][$path][3] - 8;
         // seek to offset of file header within the .phar
         if (is_resource(@$this->fp)) {
-            fseek($this->fp, $this->_fileStart + self::$_manifest[$this->basename][$path][2]);
+            fseek($this->fp, self::$_fileStart[$this->_archiveName] + self::$_manifest[$this->_archiveName][$path][2]);
         }
     }
 
@@ -176,10 +221,10 @@ class PHP_Archive
      */
     public function extractFile($path)
     {
-        $this->fp = @fopen($this->archiveName, "rb");
+        $this->fp = @fopen($this->_archiveName, "rb");
         $stat = fstat($this->fp);
         if (!$this->fp) {
-            return array('Error: cannot open phar "' . $this->archiveName . '"');
+            return array('Error: cannot open phar "' . $this->_archiveName . '"');
         }
         if (($e = $this->selectFile($path, false)) === true) {
             $temp = unpack("Vcrc32/Visize", fread($this->fp, 8));
@@ -198,7 +243,7 @@ class PHP_Archive
             if ($this->_compressed) {
                 $data = gzinflate($data);
             }
-            if (!isset(self::$_manifest[$this->basename][$path]['ok'])) {
+            if (!isset(self::$_manifest[$this->_archiveName][$path]['ok'])) {
                 if ($temp['isize'] != $this->currentStat[7]) {
                     return array("Not valid internal .phar file (size error {$size} != " .
                         $this->currentStat[7] . ")");
@@ -206,7 +251,7 @@ class PHP_Archive
                 if ($temp['crc32'] != crc32($data)) {
                     return array("Not valid internal .phar file (checksum error)");
                 }
-                self::$_manifest[$this->basename][$path]['ok'] = true;
+                self::$_manifest[$this->_archiveName][$path]['ok'] = true;
             }
             return $data;
         } else {
@@ -241,24 +286,24 @@ class PHP_Archive
             $info['path'] = substr($info['path'], 1);
         }
         if (isset(self::$_pharMapping[$info['host']])) {
-            $this->basename = $info['host'];
-            $this->archiveName = self::$_pharMapping[$info['host']][0];
+            $this->_basename = $info['host'];
+            $this->_archiveName = self::$_pharMapping[$info['host']][0];
             $this->_compressed = self::$_pharMapping[$info['host']][1];
         } else {
             // no such phar has been included, or last opened phar is requested
             $pharinfo = end(self::$_pharMapping);
-            $this->basename = key(self::$_pharMapping);
-            $this->archiveName = $pharinfo[0];
+            $this->_basename = key(self::$_pharMapping);
+            $this->_archiveName = $pharinfo[0];
             $this->_compressed = $pharinfo[1];
         }
-        if (!isset(self::$_manifest[$this->basename])) {
-            $fp = fopen($this->archiveName, 'rb');
+        if (!isset(self::$_manifest[$this->_archiveName])) {
+            $fp = fopen($this->_archiveName, 'rb');
             // seek to __HALT_COMPILER_OFFSET__
-            fseek($fp, self::$_pharMapping[$this->basename][2]);
+            fseek($fp, self::$_pharMapping[$this->_basename][2]);
             $manifest_length = unpack('Vlen', fread($fp, 4));
-            self::$_manifest[$this->basename] =
-                $this->unserializeManifest(fread($fp, $manifest_length['len']));
-            $this->_fileStart = ftell($fp);
+            self::$_manifest[$this->_archiveName] =
+                $this->_unserializeManifest(fread($fp, $manifest_length['len']));
+            self::$_fileStart[$this->_archiveName] = ftell($fp);
             fclose($fp);
         }
         $file = $info['path'];
@@ -266,15 +311,29 @@ class PHP_Archive
     }
 
 
-    function unserializeManifest($manifest)
+    /**
+     * Enter description here...
+     *
+     * @param unknown_type $manifest
+     * @return unknown
+     */
+    private function _unserializeManifest($manifest)
     {
+        // retrieve the number of files in the manifest
         $info = unpack('V', substr($manifest, 0, 4));
         $manifest = substr($manifest, 4);
         $ret = array();
         for ($i = 0; $i < $info[1]; $i++) {
+            // length of the file name
             $len = unpack('V', substr($manifest, 0, 4));
+            // file name
             $savepath = substr($manifest, 4, $len[1]);
             $manifest = substr($manifest, $len[1] + 4);
+            // retrieve manifest data:
+            // 0 = uncompressed file size
+            // 1 = timestamp of when file was added to phar
+            // 2 = offset of file within phar relative to internal file's start
+            // 3 = compressed file size (actual size in the phar)
             $ret[$savepath] = array_values(unpack('Va/Vb/Vc/Vd', substr($manifest, 0, 16)));
             $manifest = substr($manifest, 16);
         }
@@ -410,7 +469,7 @@ class PHP_Archive
     {
         $std = $file ? self::processFile($file) : $this->currentFilename;
         if ($file) {
-            if (isset(self::$_manifest[$this->basename][$file])) {
+            if (isset(self::$_manifest[$this->_archiveName][$file])) {
                 $this->_setCurrentFile($file);
                 $isdir = false;
             } else {
@@ -457,7 +516,7 @@ class PHP_Archive
         $path = !empty($info['path']) ?
             $info['host'] . $info['path'] : $info['host'] . '/';
         $path = $this->initializeStream('phar://' . $path);
-        if (isset(self::$_manifest[$this->basename][$path])) {
+        if (isset(self::$_manifest[$this->_archiveName][$path])) {
             trigger_error('Error: "' . $path . '" is a file, and cannot be opened with opendir',
                 E_USER_ERROR);
             return false;
@@ -466,13 +525,13 @@ class PHP_Archive
             trigger_error('Error: Unknown phar in "' . $file . '"', E_USER_ERROR);
             return false;
         }
-        $this->fp = @fopen($this->archiveName, "rb");
+        $this->fp = @fopen($this->_archiveName, "rb");
         if (!$this->fp) {
-            trigger_error('Error: cannot open phar "' . $this->archiveName . '"');
+            trigger_error('Error: cannot open phar "' . $this->_archiveName . '"');
             return false;
         }
         $this->_dirFiles = array();
-        foreach (self::$_manifest[$this->basename] as $file => $info) {
+        foreach (self::$_manifest[$this->_archiveName] as $file => $info) {
             if ($path == '/') {
                 if (strpos($file, '/')) {
                     $this->_dirFiles[array_shift($a = explode('/', $file))] = true;
@@ -555,7 +614,7 @@ if (count(get_included_files()) > 1) {
 }
 ?>
 <?php __HALT_COMPILER(); ?>
-Ñ      l   testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttest.php/   “3çC    7   (¢/   <?php
+Ñ      l   testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttest.php/   ’HçC    7   (¢/   <?php
 
 echo __FILE__;
 var_dump('hello');

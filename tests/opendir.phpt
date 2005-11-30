@@ -14,22 +14,8 @@ while (false !== ($file = readdir($dir))) {
         'd' => is_dir('phar://opendir.phar/' . $file));
 }
 $phpunit = new PEAR_PHPTest(true);
+$phpunit->showAll();
 $phpunit->assertEquals(array (
-  'cachestat' => 
-  array (
-    'f' => false,
-    'd' => true,
-  ),
-  'cachestat.phpt' => 
-  array (
-    'f' => true,
-    'd' => false,
-  ),
-  'cachestattest.php' => 
-  array (
-    'f' => true,
-    'd' => false,
-  ),
   'eof.phpt' => 
   array (
     'f' => true,

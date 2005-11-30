@@ -1,6 +1,33 @@
 <?php
+/**
+ * PHP_Archive Class creator (creates .phar)
+ *
+ * @package PHP_Archive
+ * @category PHP
+ */
+/**
+ * Needed for file manipulation
+ */
 require_once 'System.php';
 require_once 'PHP/Archive.php';
+/**
+ * PHP_Archive Class creator (implements .phar)
+ *
+ * PHAR files a singular archive from which an entire application can run.
+ * To use it, simply package it using {@see PHP_Archive_Creator} and use phar://
+ * URIs to your includes. i.e. require_once 'phar://config.php' will include config.php
+ * from the root of the PHAR file.
+ *
+ * Gz code borrowed from the excellent File_Archive package by Vincent Lascaux.
+ *
+ * @copyright Copyright © David Shafik and Synaptic Media 2004. All rights reserved.
+ * @author Davey Shafik <davey@synapticmedia.net>
+ * @author Greg Beaver <cellog@php.net>
+ * @link http://www.synapticmedia.net Synaptic Media
+ * @version $Id$
+ * @package PHP_Archive
+ * @category PHP
+ */
 class PHP_Archive_Creator
 {
     /**
@@ -155,7 +182,8 @@ PHP;
             mkdir($this->temp_path . DIRECTORY_SEPARATOR . 'contents');
         }
         $size = strlen($file_contents);
-        // always use gz header/footer to help ensure validity of file
+        // save crc32 of file and the uncompressed file size, so we
+        // can do a sanity check on the file when opening it from the phar
         $file_contents =
             pack("VV",crc32($file_contents),strlen($file_contents)) .
             ($this->compress ? gzdeflate($file_contents, 9) : $file_contents);
@@ -460,11 +488,17 @@ PHP;
      *      $offset, // offset from start of files = 2
      *      $info['actualsize']); // actual size in the .phar = 3
      * </code>
+     * @return string
      */
-    function serializeManifest($manifest)
+    public function serializeManifest($manifest)
     {
         $ret = '';
         foreach ($manifest as $savepath => $info) {
+            // save the string length, then the string, then this info
+            // uncompressed file size
+            // save timestamp
+            // byte offset from the start of internal files within the phar
+            // compressed file size (actual size in the phar)
             $ret .= pack('V', strlen($savepath)) . $savepath . call_user_func_array('pack',
                 array_merge(array('VVVV'), $info));
         }

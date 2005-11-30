@@ -21,7 +21,7 @@
   </maintainers>
  <release>
   <version>0.7.0</version>
-  <date>2005-11-29</date>
+  <date>2005-11-30</date>
   <license>PHP License</license>
   <state>alpha</state>
   <notes>major refactoring - .tar file format is no longer used
@@ -59,7 +59,6 @@ and processing speed.
       <file role="test" name="makerequire_oncephar.php.inc"/>
       <file role="test" name="require_once.phar"/>
      </dir> <!-- /tests/require_once -->
-     <file role="test" name="cachestattest.php"/>
      <file role="test" name="eof.phpt"/>
      <file role="test" name="filenotfound.phpt"/>
      <file role="test" name="filenotfoundtest.php"/>
@@ -93,7 +92,7 @@ and processing speed.
  <changelog>
    <release>
     <version>0.7.0</version>
-    <date>2005-11-29</date>
+    <date>2005-11-30</date>
     <license>PHP License</license>
     <state>alpha</state>
     <notes>major refactoring - .tar file format is no longer used

@@ -21,8 +21,8 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>cellog@php.net</email>
   <active>yes</active>
  </lead>
- <date>2005-11-29</date>
- <time>23:38:11</time>
+ <date>2005-11-30</date>
+ <time>00:36:18</time>
  <version>
   <release>0.7.0</release>
   <api>0.7</api>
@@ -62,7 +62,6 @@ and processing speed.</notes>
      <file name="makerequire_oncephar.php.inc" role="test" />
      <file name="require_once.phar" role="test" />
     </dir> <!-- /tests/require_once -->
-    <file name="cachestattest.php" role="test" />
     <file name="eof.phpt" role="test" />
     <file name="filenotfound.phpt" role="test" />
     <file name="filenotfoundtest.php" role="test" />
@@ -118,7 +117,7 @@ and processing speed.</notes>
     <release>alpha</release>
     <api>alpha</api>
    </stability>
-   <date>2005-11-29</date>
+   <date>2005-11-30</date>
    <license>PHP License</license>
    <notes>major refactoring - .tar file format is no longer used
 DRAMATIC improvement in efficiency of disk use, memory usage,
