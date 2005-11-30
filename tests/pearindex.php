@@ -19,7 +19,6 @@ function testerr($type, $m, $file, $line)
     print "$errortype: $m in $file on $line\n";
 }
 //set_error_handler('testerr');
-PHP_Archive::cacheStat('PEAR.phar');
 // {{{ usage()
 
 function usage($error = null, $helpsubject = null)
@@ -159,6 +158,22 @@ if (PEAR::isError($a)) {
 }
 $ui = &PEAR_Command::getFrontendObject();
 $config = &PEAR_Config::singleton($pear_user_config, $pear_system_config);
+if (PEAR::isError($config)) {
+    $_file = '';
+    if ($pear_user_config !== false) {
+       $_file .= $pear_user_config;
+    }
+    if ($pear_system_config !== false) {
+       $_file .= '/' . $pear_system_config;
+    }
+    if ($_file == '/') {
+        $_file = 'The default config file';
+    }
+    $config->getMessage();
+    $ui->outputData("ERROR: $_file is not a valid config file or is corrupted.");
+    // We stop, we have no idea where we are :)
+    exit();    
+}
 $ui->setConfig($config);
 PEAR::setErrorHandling(PEAR_ERROR_CALLBACK, array($ui, "displayFatalError"));
 if (ini_get('safe_mode')) {

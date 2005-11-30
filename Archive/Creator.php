@@ -1,84 +1,48 @@
 <?php
-/**
- * PHP_Archive Creator Class 
- *
- * @package PHP_Archive
- * @category PHP
- */
- 
-/**
- * Require PHP_Archive
- */
-
-require_once 'PHP/Archive.php';
-
-/**
- * Require System, for temporary dir functions
- */
 require_once 'System.php';
-
-/**
- * Require Archive_Tar
- */
-
-require_once 'Archive/Tar.php';
-
-/**
- * PHP_Archive Creator Class
- *
- * This class allows you to easily, programatically create PHP Archives (PHAR files)
- *
- * @copyright Copyright © David Shafik and Synaptic Media 2004. All rights reserved.
- * @author Davey Shafik <davey@synapticmedia.net>
- * @link http://www.synapticmedia.net Synaptic Media
- * @version $Id$
- * @package PHP_Archive
- * @category PHP
- * @example c:\web\php-cvs\pear\PHP_Archive\docs\examples\PHP_Archive_Creator_Example_1.php Example PHP_Archive_Creator usage
- * @todo Implement PHP_Archive_Creator::addDir();
- */
-
-class PHP_Archive_Creator {
-    
+require_once 'PHP/Archive.php';
+class PHP_Archive_Creator
+{
     /**
      * @var string The Archive Filename
      */
-    
     protected $archive_name;
-    
-    /**
-     * @var object An instance of Archive_Tar
-     */
-    
-    protected $tar;
-    
+
     /**
      * @var string The temporary path to the TAR archive
      */
-    
     protected $temp_path;
-    
+
     /**
      * @var string Where the TAR archive will be saved
      */
-    
     protected $save_path;
+
+    /**
+     * @var string The phar alias
+     */
+    protected $alias;
     
     /**
      * @var boolean Whether or not the archive should be compressed
      */
-    
     protected $compress = false;
-    
+
     /**
      * @var boolean Whether or not a file has been added to the archive
      */
-     
     protected $modified = false;
-    
+
+    /**
+     * Used to construct the internal manifest, or listing of files/directories
+     *
+     * @var array
+     */
+    protected $manifest = array();
+
     /**
      * PHP_Archive Constructor
-     *     
+     *
      * @param string $init_file Init file (file called by default upon PHAR execution)
      * @param boolean $compress Whether to compress the files or not (will cause slowdown!)
      * @param mixed $allow_direct_access The file extension to prepend to requests for files 
@@ -87,31 +51,26 @@ class PHP_Archive_Creator {
      *                                   any file but the init file (you should handle other 
      *                                   pages in your init file code). If you set it to True,
      *                                   then the exact PATH_INFO is used
-     * @return void
+     * @param string $alias alias name like "go-pear.phar" to be used for opening
+     *                      files from this phar
      */
     public function __construct($init_file = 'index.php', $compress = false,
-                                $allow_direct_access = false)
+                                $allow_direct_access = false, $alias = null)
     {
         $this->compress = $compress;
-        $this->temp_path = System::mktemp('phr');
-        $tar = new Archive_Tar($this->temp_path);
+        $this->temp_path = System::mktemp(array('-d', 'phr'));
         $contents = trim(str_replace(array('<?php', '?>'), array('', ''),
             file_get_contents(dirname(dirname(__FILE__)) . DIRECTORY_SEPARATOR . 'Archive.php')));
         // make sure .phars added to CVS don't get checksum errors because of CVS tags
         $contents = str_replace('* @version $Id', '* @version Id', $contents);
         $unpack_code = <<<PHP
-        
-        
-        
-        
-        
-        
-        
-        
-
+<?php #PHP_ARCHIVE_HEADER-@API-VER@
 error_reporting(E_ALL);
 if (version_compare(str_replace('-dev', '', phpversion()), '5.1.0b1', '<')) {
-die('Error: .phar files require PHP 5.1 or newer');
+die('Error: .phar files require PHP 5.1.0b1 or newer');
+}
+if (function_exists('mb_internal_encoding')) {
+    mb_internal_encoding('ASCII');
 }
 if (!class_exists('PHP_Archive')) {
 $contents
@@ -126,6 +85,11 @@ if (!in_array('phar', stream_get_wrappers())) {
 }
 PHP;
 
+        $this->alias = $alias;
+        $alias = $this->alias ? $this->alias : '@ALIAS@';
+        $unpack_code .= 'PHP_Archive::mapPhar(__FILE__, "' . addslashes($alias) . '", ' .
+            ($compress ? 'true' : 'false') . ", __COMPILER_HALT_OFFSET__ + strlen(' ?>
+'));";
         if (!$allow_direct_access) {
             $unpack_code .= <<<PHP
 
@@ -154,11 +118,7 @@ if (count(get_included_files()) > 1) {
 <?php __HALT_COMPILER(); ?>
 
 PHP;
-        $tar->addString('<?php #PHP_ARCHIVE_HEADER-0.5.0.php', $unpack_code);
-        
-        $this->code = $unpack_code;
-        
-        $this->tar = $tar;
+        file_put_contents($this->temp_path . DIRECTORY_SEPARATOR . 'loader.php', $unpack_code);
     }
 
     /**
@@ -184,22 +144,35 @@ PHP;
     
     public function addString($file_contents, $save_path, $magicrequire = false)
     {
+        $save_path = PHP_Archive::processFile($save_path);
         if ($magicrequire) {
             $file_contents = str_replace("require_once '", "require_once 'phar://$magicrequire/",
                 $file_contents);
             $file_contents = str_replace("include_once '", "include_once 'phar://$magicrequire/",
                 $file_contents);
         }
-        if ($this->compress) {
-            $file_contents = '1' .
-                pack("C1C1C1C1VC1C1", 0x1f, 0x8b, 8, 0, time(), 2, 0xFF) .
-                gzdeflate($file_contents, 9) .
-                pack("VV",crc32($file_contents),strlen($file_contents));
-        } else {
-            $file_contents = '0' . $file_contents;
+        if (!file_exists($this->temp_path . DIRECTORY_SEPARATOR . 'contents')) {
+            mkdir($this->temp_path . DIRECTORY_SEPARATOR . 'contents');
         }
-        clearstatcache(); // a newly created archive could be erased if this is not performed
-        return $this->tar->addString($save_path, $file_contents);
+        $size = strlen($file_contents);
+        // always use gz header/footer to help ensure validity of file
+        $file_contents =
+            pack("VV",crc32($file_contents),strlen($file_contents)) .
+            ($this->compress ? gzdeflate($file_contents, 9) : $file_contents);
+        System::mkdir(array('-p', dirname($this->temp_path . DIRECTORY_SEPARATOR . 'contents' .
+            DIRECTORY_SEPARATOR . $save_path)));
+        if (file_exists($this->temp_path . DIRECTORY_SEPARATOR . 'contents' .
+              DIRECTORY_SEPARATOR . $save_path)) {
+            die('ERROR: path "' . $save_path . '" already exists');
+        }
+        file_put_contents($this->temp_path . DIRECTORY_SEPARATOR . 'contents' .
+            DIRECTORY_SEPARATOR . $save_path, $file_contents);
+        $this->manifest[$save_path] =
+            array(
+                'tempfile' => $this->temp_path . DIRECTORY_SEPARATOR . 'contents' .
+                    DIRECTORY_SEPARATOR . $save_path,
+                'originalsize' => $size,
+                'actualsize' => strlen($file_contents));
     }
 
     /**
@@ -406,15 +379,16 @@ PHP;
         $list = $this->dirList($dir);
         return $this->addArray($list, $magicrequire);
     }
-    
+
     /**
-     * Add an array of files to the archive
+     * add an array of files to the archive
      *
-     * @param array $files This is an associative array of the format
-     *                     'file_to_archive' => 'save_path_in_archive'
-     * @return boolean
+     * @param unknown_type $files
+     * @param bool $magicrequire determines whether to attempt to replace all
+     *                           calls to require or include with internal
+     *                           phar includes
+     * @return unknown
      */
-     
     public function addArray($files, $magicrequire = false)
     {
         if (!is_array($files) || empty($files)) {
@@ -425,19 +399,77 @@ PHP;
         }
         return !in_array(false, $returns);
     }
-    
+
     /**
-     * Save the PHAR Archive
+     * Construct the .phar and save it
      *
-     * @param string $file_path The file path of where to save the file
-     * @return void
+     * @param string $file_path
+     * @return bool success of operation
      */
-    
-    public function savePhar($file_path = null)
+    public function savePhar($file_path)
     {
-        @unlink($file_path);
-        copy($this->temp_path, $file_path);
+        uksort($this->manifest, 'strnatcasecmp');
+        $newfile = fopen($file_path, 'wb');
+        if (!$newfile) {
+            return false;
+        }
+        $loader = fopen($this->temp_path . DIRECTORY_SEPARATOR . 'loader.php', 'rb');
+        if (isset($this->alias)) {
+            stream_copy_to_stream($loader, $newfile);
+            fclose($loader);
+        } else {
+            fclose($loader);
+            $loader = file_get_contents($this->temp_path . DIRECTORY_SEPARATOR . 'loader.php');
+            $loader = str_replace('@ALIAS@', addslashes(basename($file_path)), $loader);
+            fwrite($newfile, $loader);
+        }
+        // relative offset from end of manifest
+        $offset = 0;
+        $manifest = array();
+        // create the manifest
+        foreach ($this->manifest as $savepath => $info) {
+            $size = $info['originalsize'];
+            $manifest[$savepath] = array(
+                $size, // original size = 0
+                time(), // save time = 1
+                $offset, // offset from start of files = 2
+                $info['actualsize']); // actual size in the .phar = 3
+            $offset += $info['actualsize'];
+        }
+        $manifest = $this->serializeManifest($manifest);
+        fwrite($newfile, $manifest);
+        // save each file
+        foreach ($this->manifest as $savepath => $info) {
+            $file = fopen($info['tempfile'], 'rb');
+            stream_copy_to_stream($file, $newfile);
+            fclose($file);
+        }
+        fclose($newfile);
+        return true;
     }
-    
+
+    /**
+     * serialize the manifest in a C-friendly way
+     *
+     * @param array $manifest An array like so:
+     * <code>
+     *   $manifest[] = array(
+     *      $savepath,
+     *      $size, // original size = 0
+     *      time(), // save time = 1
+     *      $offset, // offset from start of files = 2
+     *      $info['actualsize']); // actual size in the .phar = 3
+     * </code>
+     */
+    function serializeManifest($manifest)
+    {
+        $ret = '';
+        foreach ($manifest as $savepath => $info) {
+            $ret .= pack('V', strlen($savepath)) . $savepath . call_user_func_array('pack',
+                array_merge(array('VVVV'), $info));
+        }
+        // save the size of the manifest
+        return pack('VV', strlen($ret) + 4, count($manifest)) . $ret;
+    }
 }
 ?>

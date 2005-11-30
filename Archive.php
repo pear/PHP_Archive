@@ -13,7 +13,7 @@
  * URIs to your includes. i.e. require_once 'phar://config.php' will include config.php
  * from the root of the PHAR file.
  *
- * Tar/Gz code borrowed from the excellent File_Archive package by Vincent Lascaux.
+ * Gz code borrowed from the excellent File_Archive package by Vincent Lascaux.
  *
  * @copyright Copyright © David Shafik and Synaptic Media 2004. All rights reserved.
  * @author Davey Shafik <davey@synapticmedia.net>
@@ -26,66 +26,80 @@
  
 class PHP_Archive
 {
+    private $_compressed;
     /**
-     * @var string Current phar basename (like PEAR.phar)
+     * @var string Real path to the .phar archive
      */
-    protected $basename;
+    protected $pharName = null;
     /**
-     * @var string Archive filename
-     */
-    protected $archiveName = null;
-    /**
-     * Current Stat info of the current file in the tar
-     */
-    protected $currentStat = null;
-    /**
-     * Current file name in the tar
+     * Current file name in the phar
      * @var string
      */
     protected $currentFilename = null;
     /**
-     * Length of the current tar file
-     * @var int
+     * Length of current file in the phar
+     * @var string
      */
-    protected $internalFileLength = 0;
+    protected $internalFileLength = null;
     /**
-     * Length of the current tar file's footer
-     * @var int
+     * Current file statistics (size, creation date, etc.)
+     * @var string
      */
-    protected $footerLength = 0;
-    /**
-     * @var string Content of the file being requested
-     */
-    protected $file = null;
+    protected $currentStat = null;
     /**
      * @var resource|null Pointer to open .phar
      */
     protected $fp = null;
     /**
-     * @var int length of the current archive
-     */
-    protected $fplen = null;
-    /**
      * @var int Current Position of the pointer
      */
     protected $position = 0;
 
-    private static $_cache;
+    private static $_pharMapping = array();
+    private static $_manifest = array();
+    private static $_fileStart = array();
+    private $basename;
+
     /**
-     * @param string basename of the phar to cache stat from.
+     * Map a full real file path to an alias used to refer to the .phar
+     *
+     * This function can only be called from the initialization of the .phar itself.
+     * Any attempt to call from outside the .phar or to re-alias the .phar will fail
+     * as a security measure.
+     * @param string $file full realpath() filepath, like /path/to/go-pear.phar
+     * @param string $alias alias used in opening a file within the phar
+     *                      like phar://go-pear.phar/file
+     * @param bool $compressed determines whether to attempt zlib uncompression
+     *                         on accessing internal files
+     * @param int $dataoffset the value of __COMPILER_HALT_OFFSET__
      */
-    public static function cacheStat($pharname)
+    public static function mapPhar($file, $alias, $compressed, $dataoffset)
     {
-        if (!isset(self::$_cache)) {
-            self::$_cache = array();
+        if ($compressed) {
+            if (!function_exists('gzinflate')) {
+                die('Error: zlib extension is not enabled - gzinflate() function needed' .
+                    ' for compressed .phars');
+            }
         }
-        self::$_cache[$pharname] = array();
+        // this ensures that this is safe
+        if (!in_array($file, get_included_files())) {
+            die('SECURITY ERROR: PHP_Archive::mapPhar can only be called from within ' .
+                'the phar that initiates it');
+        }
+        if (!is_array(self::$_pharMapping)) {
+            self::$_pharMapping = array();
+        }
+        if (isset(self::$_pharMapping[$alias])) {
+            die('ERROR: PHP_Archive::mapPhar has already been called for alias "' .
+                $alias . '" cannot re-alias to "' . $file . '"');
+        }
+        self::$_pharMapping[$alias] = array($file, $compressed, $dataoffset);
     }
 
     /**
      * @param string
      */
-    protected function processFile($path)
+    public static function processFile($path)
     {
         if ($path == '.') {
             return '';
@@ -93,6 +107,9 @@ class PHP_Archive
         $std = str_replace("\\", "/", $path);
         while ($std != ($std = ereg_replace("[^\/:?]+/\.\./", "", $std))) ;
         $std = str_replace("/./", "", $std);
+        if (strlen($std) > 1 && $std[0] == '/') {
+            $std = substr($std, 1);
+        }
         if (strncmp($std, "./", 2) == 0) {
             return substr($std, 2);
         } else {
@@ -104,156 +121,43 @@ class PHP_Archive
      * Seek in the master archive to a matching file or directory
      * @param string
      */
-    protected function selectFile($path)
+    protected function selectFile($path, $allowdirs = true)
     {
-        $std = $this->processFile($path);
-        $this->_index = 0;
-        while (($error = $this->_nextFile()) === true) {
-            if (empty($std) || $std == $this->currentFilename ||
+        $std = self::processFile($path);
+        if (isset(self::$_manifest[$this->basename][$path])) {
+            $this->_setCurrentFile($path);
+            return true;
+        }
+        if (!$allowdirs) {
+            return 'Error: "' . $path . '" is not a file in phar "' . $this->basename . '"';
+        }
+        foreach (self::$_manifest[$this->basename] as $file => $info) {
+            if (empty($std) ||
                   //$std is a directory
-                  strncmp($std.'/', $this->currentFilename, strlen($std)+1) == 0) {
-                if (isset($this->cachedFpos)) {
-                    @fseek($this->fp, $this->cachedFpos);
-                }
+                  strncmp($std.'/', $path, strlen($std)+1) == 0) {
+                $this->currentFilename = $this->internalFileLength = $this->currentStat = null;
                 return true;
             }
         }
-        if (@ftell($this->fp) >= $this->fplen) {
-            return 'Error: "' . $path . '" not found in phar "' . $this->basename . '"';
-        }
-        return $error;
+        return 'Error: "' . $path . '" not found in phar "' . $this->basename . '"';
     }
 
-    /**
-     * Process a raw tar header and extract file name, size, and additional info
-     * @param string contents of the header
-     * @uses $footerLength sets the footer length
-     * @uses $internalFileLength sets the file length, if filename < 100 chars
-     * @uses $currentStat sets the file statistics
-     * @return array|string a string is returned on error
-     */
-    private function _processHeader($rawHeader)
+    private function _setCurrentFile($path)
     {
-        if (strlen($rawHeader) < 512 || $rawHeader == pack("a512", "")) {
-            return 'Error: phar "' . $this->archiveName . '" has corrupted tar header';
-        }
-
-        $header = unpack(
-            "a100filename/a8mode/a8uid/a8gid/a12size/a12mtime/".
-            "a8checksum/a1type/a100linkname/a6magic/a2version/".
-            "a32uname/a32gname/a8devmajor/a8devminor/a155path",
-            $rawHeader);
         $this->currentStat = array(
-            2 => octdec($header['mode']),
-            4 => octdec($header['uid']),
-            5 => octdec($header['gid']),
-            7 => octdec($header['size']),
-            9 => octdec($header['mtime'])
+            2 => 0100444, // file mode, readable by all, writeable by none
+            4 => 0, // uid
+            5 => 0, // gid
+            7 => self::$_manifest[$this->basename][$path][0], // size
+            9 => self::$_manifest[$this->basename][$path][1], // creation time
             );
-
-        $this->internalFileLength = $this->currentStat[7];
-        if ($this->internalFileLength % 512 == 0) {
-            $this->footerLength = 0;
-        } else {
-            $this->footerLength = 512 - $this->internalFileLength % 512;
+        $this->currentFilename = $path;
+        // actual file length in file includes 8-byte header
+        $this->internalFileLength = self::$_manifest[$this->basename][$path][3] - 8;
+        // seek to offset of file header within the .phar
+        if (is_resource(@$this->fp)) {
+            fseek($this->fp, self::$_fileStart[$this->basename] + self::$_manifest[$this->basename][$path][2]);
         }
-        return $header;
-    }
-
-    /**
-     * Seek to the next file, if any, and verify its integrity
-     * @return boolean|array|string if a cached file is used, true is returned.  False is returned
-     *                       for a directory entry, and the raw header unpacked is returned
-     *                       on seek success.  On error, a string is returned
-     */
-    private function _nextFile()
-    {
-        if (isset(self::$_cache) &&
-              isset(self::$_cache[$this->basename]) &&
-              isset(self::$_cache[$this->basename][$this->_index])) {
-            $this->currentFilename =
-                self::$_cache[$this->basename][$this->_index]['file'];
-            $this->currentStat =
-                self::$_cache[$this->basename][$this->_index]['stat'];
-            $this->internalFileLength =
-                self::$_cache[$this->basename][$this->_index]['length'];
-            $this->cachedFpos = self::$_cache[$this->basename][$this->_index]['fpos'];
-            $this->footerLength =
-                self::$_cache[$this->basename][$this->_index]['footerlen'];
-            $this->_index++;
-            return true;
-        }
-        if (isset($this->cachedFpos)) {
-            @fseek($this->fp, $this->cachedFpos);
-        }
-        fseek($this->fp, $this->internalFileLength + $this->footerLength, SEEK_CUR);
-        $rawHeader = @fread($this->fp, 512);
-        $header = $this->_processHeader($rawHeader);
-        if (is_string($header)) {
-            return $header;
-        }
-        if ($header['type'] == '5') {
-            return false; // directory entry
-        }
-
-        if ($header['type'] == 'L') {
-            // filenames longer than 100 characters
-            // borrowed from Archive_Tar written by Vincent Blavet
-            $longFilename = '';
-            $n = floor($header['size']/512);
-            for ($i=0; $i < $n; $i++) {
-                $content = @fread($this->fp, 512);
-                $longFilename .= $content;
-            }
-            if (($header['size'] % 512) != 0) {
-                $content = @fread($this->fp, 512);
-                $longFilename .= $content;
-            }
-            // ----- Read the next header
-            $newHeader = @fread($this->fp, 512);
-            $header = $this->_processHeader($newHeader);
-            if (is_string($header)) {
-                return $header;
-            }
-            $header['filename'] = trim($longFilename);
-            $rawHeader = $newHeader;
-        }
-        $this->currentFilename = $this->processFile($header['path'] . $header['filename']);
-        $checksum = 8 * ord(" ");
-        if (version_compare(phpversion(), '5.0.0', '>=')) {
-            $c1 = str_split(substr($rawHeader, 0, 512));
-            $checkheader = array_merge(array_slice($c1, 0, 148), array_slice($c1, 156));
-            if (!function_exists('_PharDoChecksum')) {
-                function _PharDoChecksum($a, $b) {return $a + ord($b);}
-            }
-            $checksum += array_reduce($checkheader, '_PharDoChecksum');
-        } else {
-            for ($i = 0; $i < 148; $i++) {
-                $checksum += ord($rawHeader{$i});
-            }
-            for ($i = 156; $i < 512; $i++) {
-                $checksum += ord($rawHeader{$i});
-            }
-        }
-
-        if (octdec($header['checksum']) != $checksum) {
-            return 'Error: phar "' .
-                $this->archiveName . '" Checksum error on entry "' . $this->currentFilename . '"';
-        }
-        if (isset(self::$_cache) &&
-              isset(self::$_cache[$this->basename])) {
-            self::$_cache[$this->basename][] =
-                array(
-                    'file' => $this->currentFilename,
-                    'stat' => $this->currentStat,
-                    'length' => $this->internalFileLength,
-                    'fpos' => @ftell($this->fp),
-                    'footerlen' => $this->footerLength,
-                );
-            $this->cachedFpos = null;
-        }
-        $this->_index++;
-        return true;
     }
 
     /**
@@ -266,11 +170,11 @@ class PHP_Archive
     {
         $this->fp = @fopen($this->archiveName, "rb");
         $stat = fstat($this->fp);
-        $this->fplen = $stat['size'];
         if (!$this->fp) {
             return array('Error: cannot open phar "' . $this->archiveName . '"');
         }
-        if (($e = $this->selectFile($path)) === true) {
+        if (($e = $this->selectFile($path, false)) === true) {
+            $temp = unpack("Vcrc32/Visize", fread($this->fp, 8));
             $data = '';
             $count = $this->internalFileLength;
             while ($count) {
@@ -283,6 +187,19 @@ class PHP_Archive
                 }
             }
             @fclose($this->fp);
+            if ($this->_compressed) {
+                $data = gzinflate($data);
+            }
+            if (!isset(self::$_manifest[$this->basename][$path]['ok'])) {
+                if ($temp['isize'] != $this->currentStat[7]) {
+                    return array("Not valid internal .phar file (size error {$size} != " .
+                        $this->currentStat[7] . ")");
+                }
+                if ($temp['crc32'] != crc32($data)) {
+                    return array("Not valid internal .phar file (checksum error)");
+                }
+                self::$_manifest[$this->basename][$path]['ok'] = true;
+            }
             return $data;
         } else {
             @fclose($this->fp);
@@ -303,34 +220,57 @@ class PHP_Archive
      */
     public function initializeStream($file)
     {
-        $aname = get_included_files();
-        $this->archiveName = 'phar://';
-        if (strpos($file, '.phar')) {
-            // grab the basename of the phar we want
-            $test = substr($file, 0, strpos($file, '.phar') + 5);
+        $info = parse_url($file);
+        if (!isset($info['host']) || !count(self::$_pharMapping)) {
+            // malformed internal file
+            return false;
+        }
+        if (!isset($info['path'])) {
+            // last opened phar is requested
+            $info['path'] = $info['host'];
+            $info['host'] = '';
+        } elseif (strlen($info['path']) > 1) {
+            $info['path'] = substr($info['path'], 1);
+        }
+        if (isset(self::$_pharMapping[$info['host']])) {
+            $this->basename = $info['host'];
+            $this->archiveName = self::$_pharMapping[$info['host']][0];
+            $this->_compressed = self::$_pharMapping[$info['host']][1];
         } else {
-            $test = false;
+            // no such phar has been included, or last opened phar is requested
+            $pharinfo = end(self::$_pharMapping);
+            $this->basename = key(self::$_pharMapping);
+            $this->archiveName = $pharinfo[0];
+            $this->_compressed = $pharinfo[1];
         }
-        while (count($aname)) {
-            $this->archiveName = array_pop($aname);
-            if (strpos($this->archiveName, 'phar://') === false) {
-                if ($test) {
-                    if (strpos($this->archiveName, $test)) {
-                        break;
-                    }
-                } else {
-                    break;
-                }
-            }
+        if (!isset(self::$_manifest[$this->basename])) {
+            $fp = fopen($this->archiveName, 'rb');
+            // seek to __HALT_COMPILER_OFFSET__
+            fseek($fp, self::$_pharMapping[$this->basename][2]);
+            $manifest_length = unpack('Vlen', fread($fp, 4));
+            self::$_manifest[$this->basename] =
+                $this->unserializeManifest(fread($fp, $manifest_length['len']));
+            self::$_fileStart[$this->basename] = ftell($fp);
+            fclose($fp);
         }
-        if ($test && $this->archiveName != 'phar://') {
-            $this->basename = $test;
-            $file = substr($file, strlen($test) + 1);
-            if (!$file) {
-                $file = '/'; // this is for opendir requests
-            }
-        }
+        $file = $info['path'];
         return $file;
+    }
+
+
+    function unserializeManifest($manifest)
+    {
+        $info = unpack('V', substr($manifest, 0, 4));
+        $manifest = substr($manifest, 4);
+        $ret = array();
+        for ($i = 0; $i < $info[1]; $i++) {
+            $len = unpack('V', substr($manifest, 0, 4));
+            $savepath = substr($manifest, 4, $len[1]);
+            $manifest = substr($manifest, $len[1] + 4);
+            $ret[$savepath] = array_values(unpack('Va/Vb/Vc/Vd', substr($manifest, 0, 16)));
+            $manifest = substr($manifest, 16);
+        }
+        return $ret;
     }
 
     /**
@@ -354,9 +294,8 @@ class PHP_Archive
      */
     private function _streamOpen($file, $searchForDir = false)
     {
-        $path = substr($file, 7);
-        $path = $this->initializeStream($path);
-        if ($this->archiveName == 'phar://') {
+        $path = $this->initializeStream($file);
+        if (!$path) {
             trigger_error('Error: Unknown phar in "' . $file . '"', E_USER_ERROR);
         }
         if (is_array($this->file = $this->extractFile($path))) {
@@ -372,34 +311,7 @@ class PHP_Archive
                 return true;
             }
         }
-        $compressed = $this->file ? (int) $this->file{0} : false;
-        $this->file ? $this->file = substr($this->file, 1) : false;
-        if ($compressed) {
-            if (!function_exists('gzinflate')) {
-                trigger_error('Error: zlib extension is not enabled - gzinflate() function needed' .
-                    ' for compressed .phars');
-                return false;
-            }
-            $header = substr($this->file, 0, 10);
-            $temp = unpack("Vcrc32/Visize", substr($this->file, -8));
-    
-            $id = @unpack("H2id1/H2id2/C1tmp/C1flags", substr($header, 0, 4));
-            if ($id['id1'] != "1f" || $id['id2'] != "8b") {
-                trigger_error("Not valid gz file (wrong header)", E_USER_ERROR);
-                return false;
-            }
-            $this->file = gzinflate(substr($this->file, 10, strlen($this->file) - 8));
 
-            if ($temp['isize'] != strlen($this->file)) {
-                trigger_error("Not valid gz file (size error {$size} != " .
-                    strlen($this->file) . ")", E_USER_ERROR);
-                return false;
-            }
-            if ($temp['crc32'] != crc32($this->file)) {
-                trigger_error("Not valid gz file (checksum error)", E_USER_ERROR);
-                return false;
-            }
-        }
         if (!is_null($this->file) && $this->file !== false) {
             return true;
         } else {
@@ -426,7 +338,7 @@ class PHP_Archive
      */
     function stream_eof()
     {
-        return $this->position >= strlen($this->file);
+        return $this->position >= $this->currentStat[7];
     }
     
     /**
@@ -445,16 +357,16 @@ class PHP_Archive
                 $this->position = $pos;
                 break;
             case SEEK_CUR:
-                if ($pos + strlen($this->file) < 0) {
+                if ($pos + $this->currentStat[7] < 0) {
                     return false;
                 }
                 $this->position += $pos;
                 break;
             case SEEK_END:
-                if ($pos + strlen($this->file) < 0) {
+                if ($pos + $this->currentStat[7] < 0) {
                     return false;
                 }
-                $this->position = $pos + strlen($this->file);
+                $this->position = $pos + $this->currentStat[7];
             default:
                 return false;
         }
@@ -471,7 +383,8 @@ class PHP_Archive
     }
 
     /**
-     * The result of an fstat call, returns mod time from tar, and file size - PHP streams API
+     * The result of an fstat call, returns mod time from creation, and file size -
+     * PHP streams API
      * @uses _stream_stat()
      * @access private
      */
@@ -487,8 +400,17 @@ class PHP_Archive
      */
     public function _stream_stat($file = null)
     {
-        $std = $file ? $this->processFile($file) : $this->currentFilename;
-        $isdir = strncmp($std . '/', $this->currentFilename, strlen($std) + 1) == 0;
+        $std = $file ? self::processFile($file) : $this->currentFilename;
+        if ($file) {
+            if (isset(self::$_manifest[$this->basename][$file])) {
+                $this->_setCurrentFile($file);
+                $isdir = false;
+            } else {
+                $isdir = true;
+            }
+        } else {
+            $isdir = false; // open streams must be files
+        }
         $mode = $isdir ? 0040444 : 0100444;
         // 040000 = dir, 010000 = file
         // everything is readable, nothing is writeable
@@ -497,7 +419,7 @@ class PHP_Archive
            'dev' => 0, 'ino' => 0,
            'mode' => $mode,
            'nlink' => 0, 'uid' => 0, 'gid' => 0, 'rdev' => 0, 'blksize' => 0, 'blocks' => 0,
-           'size' => strlen($this->file),
+           'size' => $this->currentStat[7],
            'atime' => $this->currentStat[9],
            'mtime' => $this->currentStat[9],
            'ctime' => $this->currentStat[9],
@@ -512,8 +434,6 @@ class PHP_Archive
      */
     public function url_stat($url, $flags)
     {
-        $this->_streamOpen($url, true);
-        $url = substr($url, 7);
         $path = $this->initializeStream($url);
         return $this->_stream_stat($path);
     }
@@ -528,32 +448,33 @@ class PHP_Archive
         $info = parse_url($path);
         $path = !empty($info['path']) ?
             $info['host'] . $info['path'] : $info['host'] . '/';
-        $path = $this->initializeStream($path);
-        if ($this->archiveName == 'phar://') {
+        $path = $this->initializeStream('phar://' . $path);
+        if (isset(self::$_manifest[$this->basename][$path])) {
+            trigger_error('Error: "' . $path . '" is a file, and cannot be opened with opendir',
+                E_USER_ERROR);
+            return false;
+        }
+        if ($path == false) {
             trigger_error('Error: Unknown phar in "' . $file . '"', E_USER_ERROR);
             return false;
         }
         $this->fp = @fopen($this->archiveName, "rb");
-        $stat = fstat($this->fp);
-        $this->fplen = $stat['size'];
         if (!$this->fp) {
-            return array('Error: cannot open phar "' . $this->archiveName . '"');
+            trigger_error('Error: cannot open phar "' . $this->archiveName . '"');
+            return false;
         }
         $this->_dirFiles = array();
-        while (($error = $this->_nextFile()) === true) {
-            if (strpos($this->currentFilename, '#PHP_ARCHIVE_HEADER-0.5.0.php')) {
-                continue;
-            }
+        foreach (self::$_manifest[$this->basename] as $file => $info) {
             if ($path == '/') {
-                if (strpos($this->currentFilename, '/')) {
-                    $this->_dirFiles[array_shift($a = explode('/', $this->currentFilename))] = true;
+                if (strpos($file, '/')) {
+                    $this->_dirFiles[array_shift($a = explode('/', $file))] = true;
                 } else {
-                    $this->_dirFiles[$this->currentFilename] = true;
+                    $this->_dirFiles[$file] = true;
                 }
-            } elseif (strpos($this->currentFilename, $path) === 0) {
-                $fname = substr($this->currentFilename, strlen($path) + 1);
+            } elseif (strpos($file, $path) === 0) {
+                $fname = substr($file, strlen($path) + 1);
                 if (strpos($fname, '/')) {
-                    $this->_dirFiles[array_unshift(explode('/', $fname))] = true;
+                    $this->_dirFiles[array_unshift($a = explode('/', $fname))] = true;
                 } else {
                     $this->_dirFiles[$fname] = true;
                 }

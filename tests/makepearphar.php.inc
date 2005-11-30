@@ -1,6 +1,5 @@
 <?php
-$peardir = 'C:\devel\pear_with_channels';
-$xmlrpcdir = 'C:\php5\pear\XML';
+$peardir = 'C:\development\pear-core';
 
 require_once 'PEAR/PackageFile.php';
 require_once 'PEAR/Config.php';
@@ -14,6 +13,20 @@ $creator = new PHP_Archive_Creator('index.php', true);
 $commandcontents = file_get_contents(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'pearindex.php');
 $commandcontents = str_replace('@PEARVER@', $pearver, $commandcontents);
 $creator->addString($commandcontents, 'index.php');
+
+$commandcontents = file_get_contents($peardir . DIRECTORY_SEPARATOR . 'OS' .
+    DIRECTORY_SEPARATOR . 'Guess.php');
+$commandcontents = str_replace(
+    array(
+        "include_once \"",
+        "@package_version@",
+    ),
+    array(
+        "include_once \"phar://go-pear.phar/",
+        $pearver,
+    ),
+    $commandcontents);
+$creator->addString($commandcontents, 'OS/Guess.php');
 
 $commandcontents = file_get_contents($peardir . DIRECTORY_SEPARATOR . 'PEAR' .
     DIRECTORY_SEPARATOR . 'Command.php');
@@ -35,11 +48,13 @@ $commandcontents = str_replace(
     array(
         "require_once '",
         "include_once '",
+        'if (file_exists($path . "/PEAR/Task/$task.php")) {',
         "include_once \"PEAR/Task/\$task.php",
     ),
     array(
         "require_once 'phar://PEAR.phar/",
         "include_once 'phar://PEAR.phar/",
+        'if (true) {', // we're self-contained, so this should work
         "include_once \"phar://PEAR.phar/PEAR/Task/\$task.php",
     ),
     $commandcontents);
@@ -60,22 +75,6 @@ $commandcontents = str_replace(
 $creator->addString($commandcontents, 'PEAR/Frontend.php');
 
 $commandcontents = file_get_contents($peardir . DIRECTORY_SEPARATOR . 'PEAR' .
-    DIRECTORY_SEPARATOR . 'Command' . DIRECTORY_SEPARATOR . 'Package.php');
-$commandcontents = str_replace(
-    array(
-        "require_once '",
-        "include_once '",
-        "@DATA-DIR@",
-    ),
-    array(
-        "require_once 'phar://PEAR.phar/",
-        "include_once 'phar://PEAR.phar/",
-        "phar://PEAR.phar",
-    ),
-    $commandcontents);
-$creator->addString($commandcontents, 'PEAR/Command/Package.php');
-
-$commandcontents = file_get_contents($peardir . DIRECTORY_SEPARATOR . 'PEAR' .
     DIRECTORY_SEPARATOR . 'Downloader' . DIRECTORY_SEPARATOR . 'Package.php');
 $commandcontents = str_replace(
     array(
@@ -90,6 +89,40 @@ $commandcontents = str_replace(
     ),
     $commandcontents);
 $creator->addString($commandcontents, 'PEAR/Downloader/Package.php');
+
+$commandcontents = file_get_contents($peardir . DIRECTORY_SEPARATOR . 'PEAR' .
+    DIRECTORY_SEPARATOR . 'PackageFile' . DIRECTORY_SEPARATOR . 'v2' .
+    DIRECTORY_SEPARATOR . 'Validator.php');
+$commandcontents = str_replace(
+    array(
+        "require_once '",
+        "include_once '",
+        "@PEAR-VER@",
+    ),
+    array(
+        "require_once 'phar://PEAR.phar/",
+        "include_once 'phar://PEAR.phar/",
+        $pearver,
+    ),
+    $commandcontents);
+$creator->addString($commandcontents, 'PEAR/PackageFile/v2/Validator.php');
+
+$commandcontents = file_get_contents($peardir . DIRECTORY_SEPARATOR . 'PEAR' .
+    DIRECTORY_SEPARATOR . 'PackageFile' . DIRECTORY_SEPARATOR . 'v2' .
+    DIRECTORY_SEPARATOR . 'rw.php');
+$commandcontents = str_replace(
+    array(
+        "require_once '",
+        "include_once '",
+        "@package_version@",
+    ),
+    array(
+        "require_once 'phar://PEAR.phar/",
+        "include_once 'phar://PEAR.phar/",
+        $pearver,
+    ),
+    $commandcontents);
+$creator->addString($commandcontents, 'PEAR/PackageFile/v2/rw.php');
 
 $commandcontents = file_get_contents($peardir . DIRECTORY_SEPARATOR . 'PEAR' .
     DIRECTORY_SEPARATOR . 'PackageFile' . DIRECTORY_SEPARATOR . 'Generator' .
@@ -126,22 +159,6 @@ $commandcontents = str_replace(
 $creator->addString($commandcontents, 'PEAR/PackageFile/Generator/v2.php');
 
 $commandcontents = file_get_contents($peardir . DIRECTORY_SEPARATOR . 'PEAR' .
-    DIRECTORY_SEPARATOR . 'Builder.php');
-$commandcontents = str_replace(
-    array(
-        "require_once '",
-        "include_once '",
-        "@PEAR-VER@",
-    ),
-    array(
-        "require_once 'phar://PEAR.phar/",
-        "include_once 'phar://PEAR.phar/",
-        $pearver,
-    ),
-    $commandcontents);
-$creator->addString($commandcontents, 'PEAR/Builder.php');
-
-$commandcontents = file_get_contents($peardir . DIRECTORY_SEPARATOR . 'PEAR' .
     DIRECTORY_SEPARATOR . 'Dependency2.php');
 $commandcontents = str_replace(
     array(
@@ -156,6 +173,20 @@ $commandcontents = str_replace(
     ),
     $commandcontents);
 $creator->addString($commandcontents, 'PEAR/Dependency2.php');
+
+$commandcontents = file_get_contents($peardir . DIRECTORY_SEPARATOR . 'OS' .
+    DIRECTORY_SEPARATOR . 'Guess.php');
+$commandcontents = str_replace(
+    array(
+        "include_once \"",
+        "@package_version@",
+    ),
+    array(
+        "include_once \"phar://PEAR.phar/",
+        $pearver,
+    ),
+    $commandcontents);
+$creator->addString($commandcontents, 'OS/Guess.php');
 
 $commandcontents = file_get_contents($peardir . DIRECTORY_SEPARATOR . 'PEAR' .
     DIRECTORY_SEPARATOR . 'PackageFile.php');
@@ -173,12 +204,12 @@ $commandcontents = str_replace(
     $commandcontents);
 $creator->addString($commandcontents, 'PEAR/PackageFile.php');
 
-$creator->addFile($xmlrpcdir . DIRECTORY_SEPARATOR . 'RPC.php', 'XML/RPC.php', true);
 $creator->addFile($peardir . DIRECTORY_SEPARATOR . 'template.spec', 'PEAR/template.spec');
 $creator->addDir($peardir, array('tests/',
     'scripts/',
     'go-pear-list.php',
     'install-pear.php',
+    '*OS/Guess.php',
     '*PEAR/Autoloader.php',
     '*PEAR/Builder.php',
     '*PEAR/Dependency.php',
@@ -186,7 +217,6 @@ $creator->addDir($peardir, array('tests/',
     '*PEAR/Dependency2.php',
     '*PEAR/PackageFile/Generator/v1.php',
     '*PEAR/PackageFile/Generator/v2.php',
-    '*PEAR/newRemote.php',
     '*PEAR/ErrorStack5.php',
     '*PEAR/Exception.php',
     '*PEAR/FTP.php',
@@ -205,6 +235,6 @@ $creator->addDir($peardir, array('tests/',
     '*PEAR/Task/Replace/rw.php',
     '*PEAR/Task/Unixeol/rw.php',
     '*PEAR/Task/Windowseol/rw.php',
-    '*PEAR/Frontend.php'), array('*.php'), 'PEAR.phar');
+    '*PEAR/Frontend.php'), array('*.php','*.xml'), 'PEAR.phar');
 $creator->savePhar(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'PEAR.phar');
 ?>

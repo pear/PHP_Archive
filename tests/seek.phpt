@@ -10,10 +10,10 @@ if (version_compare(phpversion(), '5.0.0', '<')) {
 <?php
 require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . 'phpt_test.php.inc';
 require_once 'PHP/Archive.php';
-require dirname(__FILE__) . DIRECTORY_SEPARATOR . 'cachestat' . DIRECTORY_SEPARATOR .
-    'cachestat.phar';
+require dirname(__FILE__) . DIRECTORY_SEPARATOR . 'longfilename' . DIRECTORY_SEPARATOR .
+    'longphar.phar';
 $phpunit = new PEAR_PHPTest(true);
-$fp = fopen('phar://cachestat.phar/test1.php', 'r');
+$fp = fopen('phar://longphar.phar/testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttest.php', 'r');
 var_dump(ftell($fp));
 var_dump(fread($fp, 2));
 fseek($fp, 3);
@@ -36,7 +36,7 @@ fclose($fp);
 echo 'tests done';
 ?>
 --EXPECT--
-phar://cachestat.phar/test1.phpstring(5) "hello"
+phar://longphar.phar/testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttest.phpstring(5) "hello"
 int(0)
 string(2) "<?"
 int(3)

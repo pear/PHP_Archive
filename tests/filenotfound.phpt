@@ -17,5 +17,5 @@ require dirname(__FILE__) . DIRECTORY_SEPARATOR . 'filenotfound' . DIRECTORY_SEP
 echo 'tests done';
 ?>
 --EXPECT--
-Error: "test2.php" not found in phar "cachestat.phar"
+Error: "test2.php" is not a file in phar "filenotfound.phar"
 tests done
