@@ -21,7 +21,7 @@
   </maintainers>
  <release>
   <version>0.7.0</version>
-  <date>2005-11-25</date>
+  <date>2005-11-29</date>
   <license>PHP License</license>
   <state>alpha</state>
   <notes>major refactoring - .tar file format is no longer used
@@ -38,15 +38,9 @@ and processing speed.
      <file role="php" name="Creator.php">
       <replace from="@API-VER@" to="api-version" type="package-info"/>
      </file>
-     <file role="php" name="Creator2.php">
-      <replace from="@API-VER@" to="api-version" type="package-info"/>
-     </file>
+     <file role="php" name="Creator2.php"/>
     </dir> <!-- /Archive -->
     <dir name="tests">
-     <dir name="cachestat">
-      <file role="test" name="cachestat.phar"/>
-      <file role="test" name="makecachestatphar.php.inc"/>
-     </dir> <!-- /tests/cachestat -->
      <dir name="filenotfound">
       <file role="test" name="filenotfound.phar"/>
       <file role="test" name="makefilenotfoundphar.php.inc"/>
@@ -66,8 +60,6 @@ and processing speed.
       <file role="test" name="makerequire_oncephar.php.inc"/>
       <file role="test" name="require_once.phar"/>
      </dir> <!-- /tests/require_once -->
-     <file role="test" name="cachestat.phpt"/>
-     <file role="test" name="cachestattest.php"/>
      <file role="test" name="eof.phpt"/>
      <file role="test" name="filenotfound.phpt"/>
      <file role="test" name="filenotfoundtest.php"/>
@@ -95,16 +87,14 @@ and processing speed.
     <file role="php" name="Archive.php">
      <replace from="@API-VER@" to="api-version" type="package-info"/>
     </file>
-    <file role="php" name="Archive2.php">
-     <replace from="@API-VER@" to="api-version" type="package-info"/>
-    </file>
+    <file role="php" name="Archive2.php"/>
    </dir> <!-- / -->
   </filelist>
  </release>
  <changelog>
    <release>
     <version>0.7.0</version>
-    <date>2005-11-25</date>
+    <date>2005-11-29</date>
     <license>PHP License</license>
     <state>alpha</state>
     <notes>major refactoring - .tar file format is no longer used

@@ -21,8 +21,8 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>cellog@php.net</email>
   <active>yes</active>
  </lead>
- <date>2005-11-25</date>
- <time>02:05:03</time>
+ <date>2005-11-29</date>
+ <time>23:25:00</time>
  <version>
   <release>0.7.0</release>
   <api>0.7</api>
@@ -38,69 +38,59 @@ and processing speed.</notes>
  <contents>
   <dir baseinstalldir="PHP" name="/">
    <dir name="Archive">
-    <file baseinstalldir="PHP" name="Creator.php" role="php">
+    <file name="Creator.php" role="php">
      <tasks:replace from="@API-VER@" to="api-version" type="package-info" />
     </file>
-    <file baseinstalldir="PHP" name="Creator2.php" role="php">
-     <tasks:replace from="@API-VER@" to="api-version" type="package-info" />
-    </file>
+    <file name="Creator2.php" role="php" />
    </dir> <!-- /Archive -->
    <dir name="tests">
-    <dir name="cachestat">
-     <file baseinstalldir="PHP" name="cachestat.phar" role="test" />
-     <file baseinstalldir="PHP" name="makecachestatphar.php.inc" role="test" />
-    </dir> <!-- /tests/cachestat -->
     <dir name="filenotfound">
-     <file baseinstalldir="PHP" name="filenotfound.phar" role="test" />
-     <file baseinstalldir="PHP" name="makefilenotfoundphar.php.inc" role="test" />
+     <file name="filenotfound.phar" role="test" />
+     <file name="makefilenotfoundphar.php.inc" role="test" />
     </dir> <!-- /tests/filenotfound -->
     <dir name="longfilename">
-     <file baseinstalldir="PHP" name="longphar.phar" role="test" />
-     <file baseinstalldir="PHP" name="makelongphar.php.inc" role="test" />
+     <file name="longphar.phar" role="test" />
+     <file name="makelongphar.php.inc" role="test" />
     </dir> <!-- /tests/longfilename -->
     <dir name="opendir">
-     <file baseinstalldir="PHP" name="makeopendirphar.php.inc" role="test" />
-     <file baseinstalldir="PHP" name="opendir.phar" role="test" />
+     <file name="makeopendirphar.php.inc" role="test" />
+     <file name="opendir.phar" role="test" />
     </dir> <!-- /tests/opendir -->
     <dir name="planet_php">
-     <file baseinstalldir="PHP" name="default_phar.php" role="test" />
+     <file name="default_phar.php" role="test" />
     </dir> <!-- /tests/planet_php -->
     <dir name="require_once">
-     <file baseinstalldir="PHP" name="makerequire_oncephar.php.inc" role="test" />
-     <file baseinstalldir="PHP" name="require_once.phar" role="test" />
+     <file name="makerequire_oncephar.php.inc" role="test" />
+     <file name="require_once.phar" role="test" />
     </dir> <!-- /tests/require_once -->
-    <file baseinstalldir="PHP" name="cachestat.phpt" role="test" />
-    <file baseinstalldir="PHP" name="cachestattest.php" role="test" />
-    <file baseinstalldir="PHP" name="eof.phpt" role="test" />
-    <file baseinstalldir="PHP" name="filenotfound.phpt" role="test" />
-    <file baseinstalldir="PHP" name="filenotfoundtest.php" role="test" />
-    <file baseinstalldir="PHP" name="gopearphar.php.inc" role="test" />
-    <file baseinstalldir="PHP" name="longfilename.phpt" role="test" />
-    <file baseinstalldir="PHP" name="makepearphar.php.inc" role="test" />
-    <file baseinstalldir="PHP" name="new_phar.phar" role="test" />
-    <file baseinstalldir="PHP" name="normalstat.phpt" role="test" />
-    <file baseinstalldir="PHP" name="opendir.phpt" role="test" />
-    <file baseinstalldir="PHP" name="pearindex.php" role="test" />
-    <file baseinstalldir="PHP" name="phar.log" role="test" />
-    <file baseinstalldir="PHP" name="phpt_test.php.inc" role="test" />
-    <file baseinstalldir="PHP" name="require_once.phpt" role="test" />
-    <file baseinstalldir="PHP" name="savetest.php" role="test" />
-    <file baseinstalldir="PHP" name="seek.phpt" role="test" />
-    <file baseinstalldir="PHP" name="streamstat.phpt" role="test" />
-    <file baseinstalldir="PHP" name="test.php" role="test" />
-    <file baseinstalldir="PHP" name="test1.php" role="test" />
-    <file baseinstalldir="PHP" name="test_path.php" role="test" />
-    <file baseinstalldir="PHP" name="test_phar.phar" role="test" />
-    <file baseinstalldir="PHP" name="test_phar2.phar" role="test" />
-    <file baseinstalldir="PHP" name="test_require.php" role="test" />
-    <file baseinstalldir="PHP" name="test_tar.tar" role="test" />
+    <file name="eof.phpt" role="test" />
+    <file name="filenotfound.phpt" role="test" />
+    <file name="filenotfoundtest.php" role="test" />
+    <file name="gopearphar.php.inc" role="test" />
+    <file name="longfilename.phpt" role="test" />
+    <file name="makepearphar.php.inc" role="test" />
+    <file name="new_phar.phar" role="test" />
+    <file name="normalstat.phpt" role="test" />
+    <file name="opendir.phpt" role="test" />
+    <file name="pearindex.php" role="test" />
+    <file name="phar.log" role="test" />
+    <file name="phpt_test.php.inc" role="test" />
+    <file name="require_once.phpt" role="test" />
+    <file name="savetest.php" role="test" />
+    <file name="seek.phpt" role="test" />
+    <file name="streamstat.phpt" role="test" />
+    <file name="test.php" role="test" />
+    <file name="test1.php" role="test" />
+    <file name="test_path.php" role="test" />
+    <file name="test_phar.phar" role="test" />
+    <file name="test_phar2.phar" role="test" />
+    <file name="test_require.php" role="test" />
+    <file name="test_tar.tar" role="test" />
    </dir> <!-- /tests -->
-   <file baseinstalldir="PHP" name="Archive.php" role="php">
+   <file name="Archive.php" role="php">
     <tasks:replace from="@API-VER@" to="api-version" type="package-info" />
    </file>
-   <file baseinstalldir="PHP" name="Archive2.php" role="php">
-    <tasks:replace from="@API-VER@" to="api-version" type="package-info" />
-   </file>
+   <file name="Archive2.php" role="php" />
   </dir> <!-- / -->
  </contents>
  <dependencies>
@@ -118,14 +108,7 @@ and processing speed.</notes>
    </package>
   </required>
  </dependencies>
- <phprelease>
-  <filelist>
-   <install as="Archive.php" name="Archive2.php" />
-   <install as="Archive/Creator.php" name="Archive/Creator2.php" />
-   <ignore name="Archive.php" />
-   <ignore name="Archive/Creator.php" />
-  </filelist>
- </phprelease>
+ <phprelease />
  <changelog>
   <release>
    <version>
@@ -136,7 +119,7 @@ and processing speed.</notes>
     <release>alpha</release>
     <api>alpha</api>
    </stability>
-   <date>2005-11-25</date>
+   <date>2005-11-29</date>
    <license>PHP License</license>
    <notes>major refactoring - .tar file format is no longer used
 DRAMATIC improvement in efficiency of disk use, memory usage,
