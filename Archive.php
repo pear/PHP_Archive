@@ -61,7 +61,7 @@ class PHP_Archive
     protected $position = 0;
 
     /**
-     * Map actual realpath to phars to meta-data about the phar
+     * Map actual realpath of phars to meta-data about the phar
      *
      * Data is indexed by the alias that is used by internal files.  In other
      * words, if a file is included via:
@@ -118,7 +118,7 @@ class PHP_Archive
      *                         on accessing internal files
      * @param int $dataoffset the value of __COMPILER_HALT_OFFSET__
      */
-    public static function mapPhar($file, $alias, $compressed, $dataoffset)
+    public static final function mapPhar($alias, $compressed, $file, $dataoffset)
     {
         if ($compressed) {
             if (!function_exists('gzinflate')) {
@@ -144,7 +144,7 @@ class PHP_Archive
     /**
      * @param string
      */
-    public static function processFile($path)
+    private static function processFile($path)
     {
         if ($path == '.') {
             return '';
@@ -583,7 +583,7 @@ class PHP_Archive
      * API version of this class
      * @return string
      */
-    public function APIVersion()
+    public final function APIVersion()
     {
         return '@API-VER@';
     }

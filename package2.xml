@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<package packagerversion="1.4.5" version="2.0" xmlns="http://pear.php.net/dtd/package-2.0" xmlns:tasks="http://pear.php.net/dtd/tasks-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0
+<package packagerversion="1.4.6" version="2.0" xmlns="http://pear.php.net/dtd/package-2.0" xmlns:tasks="http://pear.php.net/dtd/tasks-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0
 http://pear.php.net/dtd/tasks-1.0.xsd
 http://pear.php.net/dtd/package-2.0
 http://pear.php.net/dtd/package-2.0.xsd">
@@ -21,20 +21,24 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>cellog@php.net</email>
   <active>yes</active>
  </lead>
- <date>2005-11-30</date>
- <time>00:36:18</time>
+ <date>2005-12-13</date>
+ <time>22:14:32</time>
  <version>
-  <release>0.7.0</release>
-  <api>0.7</api>
+  <release>0.8.0</release>
+  <api>0.7.1</api>
  </version>
  <stability>
   <release>alpha</release>
   <api>alpha</api>
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
- <notes>major refactoring - .tar file format is no longer used
-DRAMATIC improvement in efficiency of disk use, memory usage,
-and processing speed.</notes>
+ <notes>This release is fully compatible with the phar extension
+
+Small BC breaks:
+* PHP_Archive::processFile() was public static and is now private static
+* parameter order change to make phar extension
+Small feature addition:
+* creating .phars that are reliant on the .phar extension is now possible</notes>
  <contents>
   <dir baseinstalldir="PHP" name="/">
    <dir name="Archive">
@@ -111,17 +115,19 @@ and processing speed.</notes>
   <release>
    <version>
     <release>0.7.0</release>
-    <api>0.7</api>
+    <api>0.7.0</api>
    </version>
    <stability>
     <release>alpha</release>
     <api>alpha</api>
    </stability>
    <date>2005-11-30</date>
-   <license>PHP License</license>
+   <license uri="http://www.php.net/license">PHP License</license>
    <notes>major refactoring - .tar file format is no longer used
 DRAMATIC improvement in efficiency of disk use, memory usage,
-and processing speed.</notes>
+and processing speed.
+    
+   </notes>
   </release>
   <release>
    <version>
@@ -244,6 +250,25 @@ and processing speed.</notes>
    <notes>First Package
     
    </notes>
+  </release>
+  <release>
+   <version>
+    <release>0.8.0</release>
+    <api>0.7.1</api>
+   </version>
+   <stability>
+    <release>alpha</release>
+    <api>alpha</api>
+   </stability>
+   <date>2005-12-13</date>
+   <license>PHP License</license>
+   <notes>This release is fully compatible with the phar extension
+
+Small BC breaks:
+* PHP_Archive::processFile() was public static and is now private static
+* parameter order change to make phar extension
+Small feature addition:
+* creating .phars that are reliant on the .phar extension is now possible</notes>
   </release>
  </changelog>
 </package>

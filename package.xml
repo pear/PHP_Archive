@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE package SYSTEM "http://pear.php.net/dtd/package-1.0">
-<package version="1.0" packagerversion="1.4.5">
+<package version="1.0" packagerversion="1.4.6">
  <name>PHP_Archive</name>
  <summary>Create and Use PHP Archive files</summary>
  <description>PHP_Archive allows you to create a single .phar file containing an entire application.
@@ -20,13 +20,17 @@
   </maintainer>
   </maintainers>
  <release>
-  <version>0.7.0</version>
-  <date>2005-11-30</date>
+  <version>0.8.0</version>
+  <date>2005-12-13</date>
   <license>PHP License</license>
   <state>alpha</state>
-  <notes>major refactoring - .tar file format is no longer used
-DRAMATIC improvement in efficiency of disk use, memory usage,
-and processing speed.
+  <notes>This release is fully compatible with the phar extension
+
+Small BC breaks:
+* PHP_Archive::processFile() was public static and is now private static
+* parameter order change to make phar extension
+Small feature addition:
+* creating .phars that are reliant on the .phar extension is now possible
   </notes>
   <deps>
    <dep type="php" rel="ge" version="5.1.0b1" optional="no"/>
@@ -90,6 +94,20 @@ and processing speed.
   </filelist>
  </release>
  <changelog>
+   <release>
+    <version>0.8.0</version>
+    <date>2005-12-13</date>
+    <license>PHP License</license>
+    <state>alpha</state>
+    <notes>This release is fully compatible with the phar extension
+
+Small BC breaks:
+* PHP_Archive::processFile() was public static and is now private static
+* parameter order change to make phar extension
+Small feature addition:
+* creating .phars that are reliant on the .phar extension is now possible
+    </notes>
+   </release>
    <release>
     <version>0.7.0</version>
     <date>2005-11-30</date>

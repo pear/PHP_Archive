@@ -9,7 +9,6 @@
  * Needed for file manipulation
  */
 require_once 'System.php';
-require_once 'PHP/Archive.php';
 /**
  * PHP_Archive Class creator (implements .phar)
  *
@@ -68,6 +67,27 @@ class PHP_Archive_Creator
     protected $manifest = array();
 
     /**
+     * @param string
+     */
+    public static function processFile($path)
+    {
+        if ($path == '.') {
+            return '';
+        }
+        $std = str_replace("\\", "/", $path);
+        while ($std != ($std = ereg_replace("[^\/:?]+/\.\./", "", $std))) ;
+        $std = str_replace("/./", "", $std);
+        if (strlen($std) > 1 && $std[0] == '/') {
+            $std = substr($std, 1);
+        }
+        if (strncmp($std, "./", 2) == 0) {
+            return substr($std, 2);
+        } else {
+            return $std;
+        }
+    }
+
+    /**
      * PHP_Archive Constructor
      *
      * @param string $init_file Init file (file called by default upon PHAR execution)
@@ -80,9 +100,11 @@ class PHP_Archive_Creator
      *                                   then the exact PATH_INFO is used
      * @param string $alias alias name like "go-pear.phar" to be used for opening
      *                      files from this phar
+     * @param bool $relyOnPhar if true, then a slim, phar extension-dependent .phar will be
+     *                         created
      */
     public function __construct($init_file = 'index.php', $compress = false,
-                                $allow_direct_access = false, $alias = null)
+                                $allow_direct_access = false, $alias = null, $relyOnPhar = false)
     {
         $this->compress = $compress;
         $this->temp_path = System::mktemp(array('-d', 'phr'));
@@ -90,33 +112,35 @@ class PHP_Archive_Creator
             file_get_contents(dirname(dirname(__FILE__)) . DIRECTORY_SEPARATOR . 'Archive.php')));
         // make sure .phars added to CVS don't get checksum errors because of CVS tags
         $contents = str_replace('* @version $Id', '* @version Id', $contents);
-        $unpack_code = <<<PHP
-<?php #PHP_ARCHIVE_HEADER-@API-VER@
+        $unpack_code = "<?php #PHP_ARCHIVE_HEADER-@API-VER@
 error_reporting(E_ALL);
-if (version_compare(str_replace('-dev', '', phpversion()), '5.1.0b1', '<')) {
-die('Error: .phar files require PHP 5.1.0b1 or newer');
-}
+if (!class_exists('PHP_Archive')) {
 if (function_exists('mb_internal_encoding')) {
     mb_internal_encoding('ASCII');
 }
-if (!class_exists('PHP_Archive')) {
-$contents
-}
-if (PHP_Archive::APIVersion() != '@API-VER@') {
-die('Error: PHP_Archive must be API version @API-VER@ - use bundled PHP_Archive for success');
-}
-@ini_set('memory_limit', -1);
-if (!function_exists('stream_get_wrappers')) {function stream_get_wrappers(){return array();}}
+";
+        if ($relyOnPhar) {
+            $unpack_code .= $contents;
+            $unpack_code .= "if (!function_exists('stream_get_wrappers')) {function stream_get_wrappers(){return array();}}
 if (!in_array('phar', stream_get_wrappers())) {
     stream_wrapper_register('phar', 'PHP_Archive');
 }
+";
+        } else {
+            $unpack_code .= 'die("Error - phar extension not loaded");';
+        }
+        $unpack_code .= <<<PHP
+}
+if (PHP_Archive::APIVersion() != '@API-VER@') {
+die('Error: PHP_Archive must be API version @API-VER@');
+}
+@ini_set('memory_limit', -1);
 PHP;
 
         $this->alias = $alias;
         $alias = $this->alias ? $this->alias : '@ALIAS@';
-        $unpack_code .= 'PHP_Archive::mapPhar(__FILE__, "' . addslashes($alias) . '", ' .
-            ($compress ? 'true' : 'false') . ", __COMPILER_HALT_OFFSET__ + strlen(' ?>
-'));";
+        $unpack_code .= 'PHP_Archive::mapPhar("' . addslashes($alias) . '", ' .
+            ($compress ? 'true' : 'false') . (!$relyOnPhar ? ', __FILE__, __COMPILER_HALT_OFFSET__' : '') . ');';
         if (!$allow_direct_access) {
             $unpack_code .= <<<PHP
 
@@ -142,8 +166,7 @@ if (count(get_included_files()) > 1) {
     exit;
 }
 ?>
-<?php __HALT_COMPILER(); ?>
-
+<?php __HALT_COMPILER();
 PHP;
         file_put_contents($this->temp_path . DIRECTORY_SEPARATOR . 'loader.php', $unpack_code);
     }
@@ -171,7 +194,7 @@ PHP;
     
     public function addString($file_contents, $save_path, $magicrequire = false)
     {
-        $save_path = PHP_Archive::processFile($save_path);
+        $save_path = self::processFile($save_path);
         if ($magicrequire) {
             $file_contents = str_replace("require_once '", "require_once 'phar://$magicrequire/",
                 $file_contents);

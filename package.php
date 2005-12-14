@@ -2,12 +2,16 @@
 require_once 'PEAR/PackageFileManager.php';
 require_once 'PEAR/PackageFileManager2.php';
 PEAR::setErrorHAndling(PEAR_ERROR_DIE);
-$version = '0.7.0';
-$apiversion = '0.7';
+$version = '0.8.0';
+$apiversion = '0.7.1';
 $notes = <<<EOT
-major refactoring - .tar file format is no longer used
-DRAMATIC improvement in efficiency of disk use, memory usage,
-and processing speed.
+This release is fully compatible with the phar extension
+
+Small BC breaks:
+* PHP_Archive::processFile() was public static and is now private static
+* parameter order change to make phar extension
+Small feature addition:
+* creating .phars that are reliant on the .phar extension is now possible
 EOT;
 
 
