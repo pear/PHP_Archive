@@ -90,21 +90,17 @@ class PHP_Archive_Creator
     /**
      * PHP_Archive Constructor
      *
-     * @param string $init_file Init file (file called by default upon PHAR execution)
+     * @param string|false $init_file Init file (file called by default upon PHAR execution).
+     *                                if false, none will be called, and execution will return.
+     *                                use this option for libraries
      * @param boolean $compress Whether to compress the files or not (will cause slowdown!)
-     * @param mixed $allow_direct_access The file extension to prepend to requests for files 
-     *                                   (i.e. request is /index, this is .php or .htm or
-     *                                   whatever), false means that users can't browse to 
-     *                                   any file but the init file (you should handle other 
-     *                                   pages in your init file code). If you set it to True,
-     *                                   then the exact PATH_INFO is used
      * @param string $alias alias name like "go-pear.phar" to be used for opening
      *                      files from this phar
      * @param bool $relyOnPhar if true, then a slim, phar extension-dependent .phar will be
      *                         created
      */
-    public function __construct($init_file = 'index.php', $compress = false,
-                                $allow_direct_access = false, $alias = null, $relyOnPhar = false)
+    public function __construct($init_file = 'index.php', $compress = false, $alias = null,
+                                $relyOnPhar = false)
     {
         $this->compress = $compress;
         $this->temp_path = System::mktemp(array('-d', 'phr'));
@@ -141,32 +137,14 @@ PHP;
         $alias = $this->alias ? $this->alias : '@ALIAS@';
         $unpack_code .= 'PHP_Archive::mapPhar("' . addslashes($alias) . '", ' .
             ($compress ? 'true' : 'false') . (!$relyOnPhar ? ', __FILE__, __COMPILER_HALT_OFFSET__' : '') . ');';
-        if (!$allow_direct_access) {
-            $unpack_code .= <<<PHP
+        if ($init_file) {
+            $unpack_code .= '
 
-require_once 'phar://' . basename(__FILE__) . '/$init_file';
-PHP;
-        } else {
-            if ($allow_direct_access) {
-                $allow_direct_access = '';
-            } elseif ($allow_direct_access{0} != '.') {
-                $allow_direct_access = '.' . $allow_direct_access;
-            }
-            $unpack_code .= <<<PHP
-
-require_once 'phar://{$_SERVER['PATH_INFO']}$allow_direct_access';
-PHP;
+require_once \'phar://@ALIAS@/' . addslashes($init_file) . '\';
+';
         }
-        
         $unpack_code .= <<<PHP
-        
-if (count(get_included_files()) > 1) {
-    return;
-} else {
-    exit;
-}
-?>
-<?php __HALT_COMPILER();
+__HALT_COMPILER();
 PHP;
         file_put_contents($this->temp_path . DIRECTORY_SEPARATOR . 'loader.php', $unpack_code);
     }
@@ -464,12 +442,11 @@ PHP;
         if (!$newfile) {
             return false;
         }
-        $loader = fopen($this->temp_path . DIRECTORY_SEPARATOR . 'loader.php', 'rb');
         if (isset($this->alias)) {
-            stream_copy_to_stream($loader, $newfile);
-            fclose($loader);
+            $loader = file_get_contents($this->temp_path . DIRECTORY_SEPARATOR . 'loader.php');
+            $loader = str_replace('@ALIAS@', addslashes($this->alias), $loader);
+            fwrite($newfile, $loader);
         } else {
-            fclose($loader);
             $loader = file_get_contents($this->temp_path . DIRECTORY_SEPARATOR . 'loader.php');
             $loader = str_replace('@ALIAS@', addslashes(basename($file_path)), $loader);
             fwrite($newfile, $loader);
