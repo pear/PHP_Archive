@@ -10,7 +10,7 @@ This release is fully compatible with the phar extension
 Small BC breaks:
 * PHP_Archive::processFile() was public static and is now private static
 * parameter order change to make phar extension
-Small feature addition:
+Feature additions:
 * creating .phars that are reliant on the .phar extension is now possible
 EOT;
 

@@ -302,7 +302,6 @@ class PHP_Archive
         return $file;
     }
 
-
     /**
      * Enter description here...
      *
