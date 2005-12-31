@@ -1,5 +1,5 @@
 <?php
-$peardir = 'C:\development\pear-core';
+$peardir = '/home/cellog/pear-core';
 
 require_once 'PEAR/PackageFile.php';
 require_once 'PEAR/Config.php';

@@ -19,7 +19,7 @@ require_once 'System.php';
  *
  * Gz code borrowed from the excellent File_Archive package by Vincent Lascaux.
  *
- * @copyright Copyright © David Shafik and Synaptic Media 2004. All rights reserved.
+ * @copyright Copyright ? David Shafik and Synaptic Media 2004. All rights reserved.
  * @author Davey Shafik <davey@synapticmedia.net>
  * @author Greg Beaver <cellog@php.net>
  * @link http://www.synapticmedia.net Synaptic Media
@@ -110,23 +110,24 @@ class PHP_Archive_Creator
         $contents = str_replace('* @version $Id', '* @version Id', $contents);
         $unpack_code = "<?php #PHP_ARCHIVE_HEADER-@API-VER@
 error_reporting(E_ALL);
-if (!class_exists('PHP_Archive')) {
 if (function_exists('mb_internal_encoding')) {
     mb_internal_encoding('ASCII');
 }
 ";
-        if ($relyOnPhar) {
+        if (!$relyOnPhar) {
+            $unpack_code .= "if (!class_exists('PHP_Archive')) {";
             $unpack_code .= $contents;
-            $unpack_code .= "if (!function_exists('stream_get_wrappers')) {function stream_get_wrappers(){return array();}}
+            $unpack_code .= "}if (!function_exists('stream_get_wrappers')) {function stream_get_wrappers(){return array();}
+}
 if (!in_array('phar', stream_get_wrappers())) {
     stream_wrapper_register('phar', 'PHP_Archive');
 }
 ";
         } else {
-            $unpack_code .= 'die("Error - phar extension not loaded");';
+            $unpack_code .= "if (!class_exists('PHP_Archive')) {";
+            $unpack_code .= 'die("Error - phar extension not loaded");}';
         }
         $unpack_code .= <<<PHP
-}
 if (PHP_Archive::APIVersion() != '@API-VER@') {
 die('Error: PHP_Archive must be API version @API-VER@');
 }

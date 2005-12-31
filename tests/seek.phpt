@@ -42,10 +42,10 @@ string(2) "<?"
 int(3)
 string(2) "hp"
 int(5)
-int(47)
-int(46)
-int(46)
-int(45)
-int(65)
-int(48)
+int(43)
+int(42)
+int(42)
+int(41)
+int(61)
+int(44)
 tests done

@@ -1,13 +1,9 @@
-<?php #PHP_ARCHIVE_HEADER-0.7
+<?php #PHP_ARCHIVE_HEADER-0.7.1
 error_reporting(E_ALL);
-if (version_compare(str_replace('-dev', '', phpversion()), '5.1.0b1', '<')) {
-die('Error: .phar files require PHP 5.1.0b1 or newer');
-}
 if (function_exists('mb_internal_encoding')) {
     mb_internal_encoding('ASCII');
 }
-if (!class_exists('PHP_Archive')) {
-/**
+if (!class_exists('PHP_Archive')) {/**
  * PHP_Archive Class (implements .phar)
  *
  * @package PHP_Archive
@@ -27,7 +23,7 @@ if (!class_exists('PHP_Archive')) {
  * @author Davey Shafik <davey@synapticmedia.net>
  * @author Greg Beaver <cellog@php.net>
  * @link http://www.synapticmedia.net Synaptic Media
- * @version Id: Archive.php,v 1.20 2005/11/30 05:24:54 cellog Exp $
+ * @version Id: Archive.php,v 1.23 2005/12/19 22:18:04 cellog Exp $
  * @package PHP_Archive
  * @category PHP
  */
@@ -69,7 +65,7 @@ class PHP_Archive
     protected $position = 0;
 
     /**
-     * Map actual realpath to phars to meta-data about the phar
+     * Map actual realpath of phars to meta-data about the phar
      *
      * Data is indexed by the alias that is used by internal files.  In other
      * words, if a file is included via:
@@ -126,7 +122,7 @@ class PHP_Archive
      *                         on accessing internal files
      * @param int $dataoffset the value of __COMPILER_HALT_OFFSET__
      */
-    public static function mapPhar($file, $alias, $compressed, $dataoffset)
+    public static final function mapPhar($alias, $compressed, $file, $dataoffset)
     {
         if ($compressed) {
             if (!function_exists('gzinflate')) {
@@ -152,7 +148,7 @@ class PHP_Archive
     /**
      * @param string
      */
-    public static function processFile($path)
+    private static function processFile($path)
     {
         if ($path == '.') {
             return '';
@@ -309,7 +305,6 @@ class PHP_Archive
         $file = $info['path'];
         return $file;
     }
-
 
     /**
      * Enter description here...
@@ -591,27 +586,19 @@ class PHP_Archive
      * API version of this class
      * @return string
      */
-    public function APIVersion()
+    public final function APIVersion()
     {
-        return '0.7';
+        return '0.7.1';
     }
+}}if (!function_exists('stream_get_wrappers')) {function stream_get_wrappers(){return array();}
 }
-}
-if (PHP_Archive::APIVersion() != '0.7') {
-die('Error: PHP_Archive must be API version 0.7 - use bundled PHP_Archive for success');
-}
-@ini_set('memory_limit', -1);
-if (!function_exists('stream_get_wrappers')) {function stream_get_wrappers(){return array();}}
 if (!in_array('phar', stream_get_wrappers())) {
     stream_wrapper_register('phar', 'PHP_Archive');
-}PHP_Archive::mapPhar(__FILE__, "require_once.phar", true, __COMPILER_HALT_OFFSET__ + strlen(' ?>
-'));
-require_once 'phar://' . basename(__FILE__) . '/indexhooha.php';        
-if (count(get_included_files()) > 1) {
-    return;
-} else {
-    exit;
 }
-?>
-<?php __HALT_COMPILER(); ?>
-&         indexhooha.phpT   ×HC    N   ˆ¤¡T   ³±/È(àåâåJMÎÈWˆwóôq·æå*J-,Í,JÏÏKNUP/ÈH,²Ò×GÔ‰éçå—&g¤eæ€øê@öv 
+if (PHP_Archive::APIVersion() != '0.7.1') {
+die('Error: PHP_Archive must be API version 0.7.1');
+}
+@ini_set('memory_limit', -1);PHP_Archive::mapPhar("require_once.phar", true, __FILE__, __COMPILER_HALT_OFFSET__);
+
+require_once 'phar://require_once.phar/indexhooha.php';
+__HALT_COMPILER();&         indexhooha.phpP   Ù·C    K   óá´	P   ³±/È(àâJMÎÈWˆwóôq·æ*J-,Í,JÏÏKNUP/ÈH,²Ò×GÔ‰éçå—&g¤eæ€øêÖ\öv 
