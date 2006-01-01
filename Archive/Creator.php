@@ -115,7 +115,10 @@ if (function_exists('mb_internal_encoding')) {
 }
 ";
         if (!$relyOnPhar) {
-            $unpack_code .= "if (!class_exists('PHP_Archive')) {";
+            // for smooth use of phar extension
+            $unpack_code .= "if (class_exists('Phar')) {
+class PHP_Archive extends Phar {}
+} else {";
             $unpack_code .= $contents;
             $unpack_code .= "}if (!function_exists('stream_get_wrappers')) {function stream_get_wrappers(){return array();}
 }
