@@ -5,6 +5,7 @@ Test statting a .phar
 if (version_compare(phpversion(), '5.0.0', '<')) {
     echo 'skip php5-only test';
 }
+if (extension_loaded('phar')) { echo 'skip phar extension conflicts with this test'; }
 ?>
 --FILE--
 <?php

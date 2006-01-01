@@ -1,16 +1,15 @@
 --TEST--
-Test seeking a .phar stream
+Test seeking a .phar stream [phar extension]
 --SKIPIF--
 <?php
 if (version_compare(phpversion(), '5.0.0', '<')) {
     echo 'skip php5-only test';
 }
-if (extension_loaded('phar')) { echo 'skip test not compatible with phar extension'; }
+if (!extension_loaded('phar')) { echo 'skip test needs phar extension'; }
 ?>
 --FILE--
 <?php
 require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . 'phpt_test.php.inc';
-require_once 'PHP/Archive.php';
 require dirname(__FILE__) . DIRECTORY_SEPARATOR . 'longfilename' . DIRECTORY_SEPARATOR .
     'longphar.phar';
 $phpunit = new PEAR_PHPTest(true);
@@ -45,8 +44,8 @@ string(2) "hp"
 int(5)
 int(43)
 int(42)
-int(42)
-int(41)
-int(61)
-int(44)
+bool(false)
+bool(false)
+int(19)
+bool(false)
 tests done

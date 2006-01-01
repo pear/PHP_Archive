@@ -9,13 +9,17 @@ if (version_compare(phpversion(), '5.1.0b1', '<')) {
 --FILE--
 <?php
 require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . 'phpt_test.php.inc';
-require_once 'PHP/Archive.php';
+if (!class_exists('PHP_Archive')) {
+    // support phar extension
+    require_once 'PHP/Archive.php';
+}
 require dirname(__FILE__) . DIRECTORY_SEPARATOR . 'longfilename' . DIRECTORY_SEPARATOR .
     'longphar.phar';
 $phpunit = new PEAR_PHPTest(true);
 $fp = fopen('phar://longphar.phar/testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttest.php', 'r');
 var_dump(feof($fp), ftell($fp));
-fseek($fp, 10000);
+fseek($fp, filesize('phar://longphar.phar/testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttest.php'));
+fread($fp, 2);
 var_dump(feof($fp), ftell($fp));
 fclose($fp);
 echo 'tests done';
@@ -25,5 +29,5 @@ phar://longphar.phar/testtesttesttesttesttesttesttesttesttesttesttesttesttesttes
 bool(false)
 int(0)
 bool(true)
-int(10000)
+int(43)
 tests done

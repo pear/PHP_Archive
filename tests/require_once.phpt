@@ -1,6 +1,11 @@
 --TEST--
 Test running a .phar that requires a non-existent internal file
 --SKIPIF--
+<?php
+if (extension_loaded('phar')) {
+    echo 'skip test conflicts with phar extension';
+}
+?>
 --FILE--
 <?php
 require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . 'phpt_test.php.inc';
