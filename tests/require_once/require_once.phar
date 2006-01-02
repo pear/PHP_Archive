@@ -3,7 +3,10 @@ error_reporting(E_ALL);
 if (function_exists('mb_internal_encoding')) {
     mb_internal_encoding('ASCII');
 }
-if (!class_exists('PHP_Archive')) {/**
+if (!class_exists('PHP_Archive')) {
+if (class_exists('Phar')) {
+class PHP_Archive extends Phar {}
+} else {/**
  * PHP_Archive Class (implements .phar)
  *
  * @package PHP_Archive
@@ -591,7 +594,7 @@ class PHP_Archive
         return '0.7.1';
     }
 }}if (!function_exists('stream_get_wrappers')) {function stream_get_wrappers(){return array();}
-}
+}}
 if (!in_array('phar', stream_get_wrappers())) {
     stream_wrapper_register('phar', 'PHP_Archive');
 }
@@ -601,4 +604,4 @@ die('Error: PHP_Archive must be API version 0.7.1');
 @ini_set('memory_limit', -1);PHP_Archive::mapPhar("require_once.phar", true, __FILE__, __COMPILER_HALT_OFFSET__);
 
 require_once 'phar://require_once.phar/indexhooha.php';
-__HALT_COMPILER();&         indexhooha.phpP   Ù·C    K   óá´	P   ³±/È(àâJMÎÈWˆwóôq·æ*J-,Í,JÏÏKNUP/ÈH,²Ò×GÔ‰éçå—&g¤eæ€øêÖ\öv 
+__HALT_COMPILER();&         indexhooha.phpP   9n¸C    K   óá´	P   ³±/È(àâJMÎÈWˆwóôq·æ*J-,Í,JÏÏKNUP/ÈH,²Ò×GÔ‰éçå—&g¤eæ€øêÖ\öv 

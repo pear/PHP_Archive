@@ -7,7 +7,10 @@ if (extension_loaded('phar')) { echo 'skip'; }
 --FILE--
 <?php
 require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . 'phpt_test.php.inc';
-require_once 'PHP/Archive.php';
+if (!class_exists('Phar')) {
+    // support phar extension
+    require_once 'PHP/Archive.php';
+}
 function myhand($e, $s)
 {
     if ($e == E_STRICT) return;

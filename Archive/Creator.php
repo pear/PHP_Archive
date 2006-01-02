@@ -116,19 +116,22 @@ if (function_exists('mb_internal_encoding')) {
 ";
         if (!$relyOnPhar) {
             // for smooth use of phar extension
-            $unpack_code .= "if (class_exists('Phar')) {
+            $unpack_code .= "if (!class_exists('PHP_Archive')) {
+if (class_exists('Phar')) {
 class PHP_Archive extends Phar {}
 } else {";
             $unpack_code .= $contents;
             $unpack_code .= "}if (!function_exists('stream_get_wrappers')) {function stream_get_wrappers(){return array();}
-}
+}}
 if (!in_array('phar', stream_get_wrappers())) {
     stream_wrapper_register('phar', 'PHP_Archive');
 }
 ";
         } else {
-            $unpack_code .= "if (!class_exists('PHP_Archive')) {";
-            $unpack_code .= 'die("Error - phar extension not loaded");}';
+            $unpack_code .= "if (!extension_loaded('phar')) {";
+            $unpack_code .= 'die("Error - phar extension not loaded");
+}
+if (!class_exists(\'PHP_Archive\')) {class PHP_Archive extends Phar {}}';
         }
         $unpack_code .= <<<PHP
 if (PHP_Archive::APIVersion() != '@API-VER@') {
