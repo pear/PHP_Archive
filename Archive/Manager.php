@@ -11,7 +11,7 @@
 require_once 'System.php';
 /**
  *
- * @copyright Copyright © Gregory Beaver
+ * @copyright Copyright ? Gregory Beaver
  * @author Greg Beaver <cellog@php.net>
  * @version $Id$
  * @package PHP_Archive
@@ -47,7 +47,7 @@ class PHP_Archive_Manager
             while (!feof($fp) && $c = fgetc($fp)) {
                 $version .= $c;
             }
-            if (version_compare($version, '0.7', '<')) {
+            if (version_compare($version, '0.7.1', '<')) {
                 require_once 'PHP/Archive/Exception.php';
                 throw new PHP_Archive_Exception($phar . ' was created with obsolete PHP_Archive');
             }
@@ -140,13 +140,69 @@ class PHP_Archive_Manager
             throw new PHP_Archive_Exception('invalid phar "' . $this->_archiveName . '"', $errors);
         }
         $manifest = substr($manifest, 4);
+        if (strlen($manifest) < 4) {
+            $errors[] = new PHP_Archive_ExceptionExtended(
+                PHP_Archive_ExceptionExtended::MANIFESTENTRIESUNDERFLOW, array(
+                'archive' => $this->_archiveName));
+            throw new PHP_Archive_Exception('invalid phar "' . $this->_archiveName . '"', $errors);
+        }
         $ret = array();
         for ($i = 0; $i < $info[1]; $i++) {
+            if (strlen($manifest) < 4) {
+                if (isset($savepath)) {
+                    $errors[] = new PHP_Archive_ExceptionExtended(
+                        PHP_Archive_ExceptionExtended::MANIFESTENTRIESTRUNCATEDENTRY, array(
+                        'archive' => $this->_archiveName, 'last' => $savepath,
+                        'current' => '*unknown*', 'size' => $info[1], 'cur' => $i));
+                    throw new PHP_Archive_Exception('invalid phar "' . $this->_archiveName . '"', $errors);
+                } else {
+                    $errors[] = new PHP_Archive_ExceptionExtended(
+                        PHP_Archive_ExceptionExtended::MANIFESTENTRIESTRUNCATEDENTRY, array(
+                        'archive' => $this->_archiveName, 'last' => '*none*',
+                        'current' => '*unknown*', 'size' => $info[1], 'cur' => $i));
+                    throw new PHP_Archive_Exception('invalid phar "' . $this->_archiveName . '"', $errors);
+                }
+            }
             // length of the file name
             $len = unpack('V', substr($manifest, 0, 4));
+            if (strlen($manifest) < $len[1] + 4) {
+                if (isset($savepath)) {
+                    $errors[] = new PHP_Archive_ExceptionExtended(
+                        PHP_Archive_ExceptionExtended::MANIFESTENTRIESTRUNCATEDENTRY, array(
+                        'archive' => $this->_archiveName, 'last' => $savepath,
+                        'current' => '*unknown*', 'size' => $info[1], 'cur' => $i));
+                    throw new PHP_Archive_Exception('invalid phar "' . $this->_archiveName . '"', $errors);
+                } else {
+                    $errors[] = new PHP_Archive_ExceptionExtended(
+                        PHP_Archive_ExceptionExtended::MANIFESTENTRIESTRUNCATEDENTRY, array(
+                        'archive' => $this->_archiveName, 'last' => '*none*',
+                        'current' => '*unknown*', 'size' => $info[1], 'cur' => $i));
+                    throw new PHP_Archive_Exception('invalid phar "' . $this->_archiveName . '"', $errors);
+                }
+            }
             // file name
+            if (!isset($savepath)) {
+                $last = '*none*';
+            } else {
+                $last = $savepath;
+            }
             $savepath = substr($manifest, 4, $len[1]);
             $manifest = substr($manifest, $len[1] + 4);
+            if (strlen($manifest) < 16) {
+                if (isset($savepath)) {
+                    $errors[] = new PHP_Archive_ExceptionExtended(
+                        PHP_Archive_ExceptionExtended::MANIFESTENTRIESTRUNCATEDENTRY, array(
+                        'archive' => $this->_archiveName, 'last' => $last,
+                        'current' => $savepath, 'size' => $info[1], 'cur' => $i));
+                    throw new PHP_Archive_Exception('invalid phar "' . $this->_archiveName . '"', $errors);
+                } else {
+                    $errors[] = new PHP_Archive_ExceptionExtended(
+                        PHP_Archive_ExceptionExtended::MANIFESTENTRIESTRUNCATEDENTRY, array(
+                        'archive' => $this->_archiveName, 'last' => $last,
+                        'current' => $savepath, 'size' => $info[1], 'cur' => $i));
+                    throw new PHP_Archive_Exception('invalid phar "' . $this->_archiveName . '"', $errors);
+                }
+            }
             // retrieve manifest data:
             // 0 = uncompressed file size
             // 1 = timestamp of when file was added to phar
@@ -157,6 +213,68 @@ class PHP_Archive_Manager
         }
         $this->_manifest =  $ret;
         $this->_fileStart = ftell($fp);
+        foreach ($this->_manifest as $path => $info) {
+            $currentFilename = $path;
+            // actual file length in file includes 8-byte header
+            $internalFileLength = $info[3] - 8;
+            // seek to offset of file header within the .phar
+            if (!@fseek($this->fp, $this->_fileStart + $info[2])) {
+                $errors[] = new PHP_Archive_ExceptionExtended(
+                    PHP_Archive_ExceptionExtended::FILELOCATIONINVALID,
+                    array('file' => $path, 'loc' => $this->_fileStart + $info[2],
+                    'size' => filesize($this->_archiveName)));
+                continue;
+            }
+            $tdata = @fread($this->fp, 8);
+            if (strlen($tdata) < 8) {
+                $errors[] = new PHP_Archive_ExceptionExtended(
+                    PHP_Archive_ExceptionExtended::FILETRUNCATED,
+                    array('file' => $path, 'loc' => $this->_fileStart + $info[2]));
+                continue;
+            }
+            $temp = @unpack("Vcrc32/Visize", $tdata);
+            if (!$temp) {
+                $errors[] = new PHP_Archive_ExceptionExtended(
+                    PHP_Archive_ExceptionExtended::FILECORRUPTEDCRCSIZE,
+                    array('file' => $path, 'loc' => $this->_fileStart + $info[2]));
+                continue;
+            }
+            $data = '';
+            $count = $this->internalFileLength;
+            while ($count) {
+                if ($count < 8192) {
+                    $data .= @fread($this->fp, $count);
+                    $count = 0;
+                } else {
+                    $count -= 8192;
+                    $data .= @fread($this->fp, 8192);
+                }
+            }
+            @fclose($this->fp);
+            if ($this->_compressed) {
+                $data = @gzinflate($data);
+                if ($data === false) {
+                    $errors[] = new PHP_Archive_ExceptionExtended(
+                        PHP_Archive_ExceptionExtended::FILECORRUPTEDGZ,
+                        array('file' => $path, 'loc' => $this->_fileStart + $info[2]));
+                }
+            }
+            if ($temp['isize'] != $info[0]) {
+                $errors[] = new PHP_Archive_ExceptionExtended(
+                    PHP_Archive_ExceptionExtended::FILECORRUPTEDSIZE,
+                    array('file' => $path, 'expected' => $temp['isize'],
+                        'actual' => $info[0]));
+            }
+            if ($temp['crc32'] != crc32($data)) {
+                $errors[] = new PHP_Archive_ExceptionExtended(
+                    PHP_Archive_ExceptionExtended::FILECORRUPTEDCRC,
+                    array('file' => $path, 'expected' => $temp['crc32'],
+                        'actual' => crc32($data)));
+            }
+        }
+        if (count($errors)) {
+            throw new PHP_Archive_Exception('invalid phar "' . $this->_archiveName . '"', $errors);
+        }
         fclose($fp);
     }
 
