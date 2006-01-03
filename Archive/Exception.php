@@ -23,6 +23,14 @@ class PHP_Archive_ExceptionExtended extends PHP_Archive_Exception
     const NOHALTCOMPILER = 3;
     const MANIFESTOVERFLOW = 4;
     const MANIFESTENTRIESOVERFLOW = 5;
+    const MANIFESTENTRIESUNDERFLOW = 6;
+    const MANIFESTENTRIESTRUNCATEDENTRY = 7;
+    const FILELOCATIONINVALID = 8;
+    const FILETRUNCATED = 9;
+    const FILECORRUPTEDCRCSIZE = 10;
+    const FILECORRUPTEDGZ = 11;
+    const FILECORRUPTEDSIZE = 12;
+    const FILECORRUPTEDCRC = 13;
     private static $_messages = array(
         'en' => array(
             self::NOOPEN => 'Cannot open "%archive%"',
@@ -30,6 +38,14 @@ class PHP_Archive_ExceptionExtended extends PHP_Archive_Exception
             self::NOHALTCOMPILER => '"%archive%" is not a phar, has no __HALT_COMPILER();',
             self::MANIFESTOVERFLOW => '"%archive%" has a manifest larger than 1 MB, too large',
             self::MANIFESTENTRIESOVERFLOW => '"%archive%" has too many manifest entries for the manifest size',
+            self::MANIFESTENTRIESUNDERFLOW => '"%archive%" has a truncated manifest',
+            self::MANIFESTENTRIESTRUNCATEDENTRY => '"%archive%" has a truncated manifest entry after last known entry "%last%" (%cur% of %size% entries) in entry "%current%"',
+            self::FILELOCATIONINVALID => '"%archive%" manifest entry "%file%" has a starting location that cannot be located "%loc%" in a file of size "%size%"',
+            self::FILETRUNCATED => '"%archive%" file "%file%" is truncated.  File begins at "%loc%"',
+            self::FILECORRUPTEDCRCSIZE => '"%archive%" file "%file% has a corrupted crc32/file size indicator.  File begins at "%loc%"',
+            self::FILECORRUPTEDGZ => '"%archive%" file "%file%" has corrupted gzipped content.  File begins at "%loc%"',
+            self::FILECORRUPTEDSIZE => '"%archive%" file "%file%" is %actual% bytes, but size indicator at file start says it should be %expected% bytes',
+            self::FILECORRUPTEDCRC => '"%archive%" file "%file%" has a crc32 of "%actual%" but was expecting "%expected%"',
         )
     );
     private static $_lang = 'en';
