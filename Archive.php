@@ -15,7 +15,7 @@
  *
  * Gz code borrowed from the excellent File_Archive package by Vincent Lascaux.
  *
- * @copyright Copyright © David Shafik and Synaptic Media 2004. All rights reserved.
+ * @copyright Copyright David Shafik and Synaptic Media 2004. All rights reserved.
  * @author Davey Shafik <davey@synapticmedia.net>
  * @author Greg Beaver <cellog@php.net>
  * @link http://www.synapticmedia.net Synaptic Media
@@ -214,7 +214,6 @@ class PHP_Archive
     public function extractFile($path)
     {
         $this->fp = @fopen($this->_archiveName, "rb");
-        $stat = fstat($this->fp);
         if (!$this->fp) {
             return array('Error: cannot open phar "' . $this->_archiveName . '"');
         }
