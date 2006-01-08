@@ -190,10 +190,10 @@ PHP;
             mkdir($this->temp_path . DIRECTORY_SEPARATOR . 'contents');
         }
         $size = strlen($file_contents);
+        $crc32 = crc32($file_contents);
         // save crc32 of file and the uncompressed file size, so we
         // can do a sanity check on the file when opening it from the phar
         $file_contents =
-            pack("VV",crc32($file_contents),strlen($file_contents)) .
             ($this->compress ? gzdeflate($file_contents, 9) : $file_contents);
         System::mkdir(array('-p', dirname($this->temp_path . DIRECTORY_SEPARATOR . 'contents' .
             DIRECTORY_SEPARATOR . $save_path)));
@@ -208,7 +208,9 @@ PHP;
                 'tempfile' => $this->temp_path . DIRECTORY_SEPARATOR . 'contents' .
                     DIRECTORY_SEPARATOR . $save_path,
                 'originalsize' => $size,
-                'actualsize' => strlen($file_contents));
+                'actualsize' => strlen($file_contents),
+                'crc' => $crc32,
+                'flags' => $this->compress ? 1 : 0); // gz compression = 0x1
     }
 
     /**
@@ -499,15 +501,21 @@ PHP;
      */
     public function serializeManifest($manifest)
     {
-        $ret = '';
+        $apiver = explode('.', '@API-VER@');
+        // store API version and compression in 2 bytes
+        $apiver = chr(((int) $apiver[0] << 4) + $apiver[1]) .
+            chr(($apiver[2] << 4) + ($this->compress ? 0x1 : 0));
+        $ret = $apiver;
+        $ret .= pack('V', strlen($this->alias)) . $this->alias;
         foreach ($manifest as $savepath => $info) {
             // save the string length, then the string, then this info
             // uncompressed file size
             // save timestamp
-            // byte offset from the start of internal files within the phar
-            // compressed file size (actual size in the phar)
-            $ret .= pack('V', strlen($savepath)) . $savepath . call_user_func_array('pack',
-                array_merge(array('VVVV'), $info));
+            // compressed file size
+            // crc32
+            // flags
+            $ret .= $pack('V', strlen($savepath)) . $savepath . call_user_func_array('pack',
+                array_merge(array('VVVVC'), $info));
         }
         // save the size of the manifest
         return pack('VV', strlen($ret) + 4, count($manifest)) . $ret;

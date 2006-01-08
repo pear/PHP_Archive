@@ -311,8 +311,12 @@ class PHP_Archive
     {
         // retrieve the number of files in the manifest
         $info = unpack('V', substr($manifest, 0, 4));
-        $manifest = substr($manifest, 4);
+        $apiver = unpack('V', substr($manifest, 4, 8));
+        $aliaslen = unpack('V', substr($manifest, 8, 12));
+        $alias = substr($manifest, 12, $aliaslen);
+        $manifest = substr($manifest, 12 + $aliaslen);
         $ret = array();
+        $offset = 0;
         for ($i = 0; $i < $info[1]; $i++) {
             // length of the file name
             $len = unpack('V', substr($manifest, 0, 4));
@@ -322,10 +326,13 @@ class PHP_Archive
             // retrieve manifest data:
             // 0 = uncompressed file size
             // 1 = timestamp of when file was added to phar
-            // 2 = offset of file within phar relative to internal file's start
-            // 3 = compressed file size (actual size in the phar)
-            $ret[$savepath] = array_values(unpack('Va/Vb/Vc/Vd', substr($manifest, 0, 16)));
-            $manifest = substr($manifest, 16);
+            // 2 = compressed filesize
+            // 3 = crc32
+            // 4 = flags
+            $ret[$savepath] = array_values(unpack('Va/Vb/Vc/Cf', substr($manifest, 0, 13)));
+            $ret[$savepath][5] = $ret[$savepath][3];
+            $ret[$savepath][3] = $offset;
+            $offset += $ret[$savepath][2];
         }
         return $ret;
     }

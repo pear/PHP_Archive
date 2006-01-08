@@ -24,6 +24,7 @@ class PHP_Archive_Manager
     private $_version = 'unknown';
     private $_manifest;
     private $_fileStart;
+    private $_manifestSize;
     /**
      * Locate the .phar archive in the include_path and detect the file to open within
      * the archive.
@@ -281,10 +282,32 @@ class PHP_Archive_Manager
     /**
      * Display information on a phar
      *
+     * @param bool
      */
-    public function dump()
+    public function dump($return_array = false)
     {
-        
+        if (!$return_array) {
+            echo $this;
+            return;
+        }
+        $filesize = filesize($this->_archiveName);
+        $ret = array(
+            'Phar name' => $this->_archiveName,
+            'Size' => $filesize,
+            'API version' => '0.7.1',
+            'Manifest size (bytes)' => $this->_manifestSize,
+            'Manifest entries' => count($this->_manifest),
+            
+        );
+        return $ret;
+    }
+
+    public function __toString()
+    {
+        $ret = $this->dump(true);
+        $ret = array_map(create_function('$a, &$b', '$b = "$a: $b";'), $ret);
+        $ret = implode("\n", $ret);
+        return $ret;
     }
 
     /**
@@ -318,6 +341,7 @@ class PHP_Archive_Manager
         // retrieve the number of files in the manifest
         $info = unpack('V', substr($manifest, 0, 4));
         $manifest = substr($manifest, 4);
+        $this->_manifestSize = strlen($manifest);
         $ret = array();
         for ($i = 0; $i < $info[1]; $i++) {
             // length of the file name
