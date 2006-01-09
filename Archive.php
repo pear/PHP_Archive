@@ -118,14 +118,8 @@ class PHP_Archive
      *                         on accessing internal files
      * @param int $dataoffset the value of __COMPILER_HALT_OFFSET__
      */
-    public static final function mapPhar($alias, $compressed, $file, $dataoffset)
+    public static final function mapPhar($file, $dataoffset)
     {
-        if ($compressed) {
-            if (!function_exists('gzinflate')) {
-                die('Error: zlib extension is not enabled - gzinflate() function needed' .
-                    ' for compressed .phars');
-            }
-        }
         // this ensures that this is safe
         if (!in_array($file, get_included_files())) {
             die('SECURITY ERROR: PHP_Archive::mapPhar can only be called from within ' .
@@ -133,6 +127,27 @@ class PHP_Archive
         }
         if (!is_array(self::$_pharMapping)) {
             self::$_pharMapping = array();
+        }
+        if (!isset(self::$_manifest[$file])) {
+            $fp = fopen($file, 'rb');
+            // seek to __HALT_COMPILER_OFFSET__
+            fseek($fp, $dataoffset);
+            $manifest_length = unpack('Vlen', fread($fp, 4));
+            $info = $this->_unserializeManifest(fread($fp, $manifest_length['len']));
+            if (!$info) {
+                die; // error declared in unserializeManifest
+            }
+            fclose($fp);
+            $alias = $info['alias'];
+            self::$_manifest[$file] = $info['manifest'];
+            $compressed = $info['compressed'];
+            self::$_fileStart[$file] = ftell($fp);
+        }
+        if ($compressed) {
+            if (!function_exists('gzinflate')) {
+                die('Error: zlib extension is not enabled - gzinflate() function needed' .
+                    ' for compressed .phars');
+            }
         }
         if (isset(self::$_pharMapping[$alias])) {
             die('ERROR: PHP_Archive::mapPhar has already been called for alias "' .
@@ -287,16 +302,6 @@ class PHP_Archive
             $this->_archiveName = $pharinfo[0];
             $this->_compressed = $pharinfo[1];
         }
-        if (!isset(self::$_manifest[$this->_archiveName])) {
-            $fp = fopen($this->_archiveName, 'rb');
-            // seek to __HALT_COMPILER_OFFSET__
-            fseek($fp, self::$_pharMapping[$this->_basename][2]);
-            $manifest_length = unpack('Vlen', fread($fp, 4));
-            self::$_manifest[$this->_archiveName] =
-                $this->_unserializeManifest(fread($fp, $manifest_length['len']));
-            self::$_fileStart[$this->_archiveName] = ftell($fp);
-            fclose($fp);
-        }
         $file = $info['path'];
         return $file;
     }
@@ -312,10 +317,26 @@ class PHP_Archive
         // retrieve the number of files in the manifest
         $info = unpack('V', substr($manifest, 0, 4));
         $apiver = unpack('V', substr($manifest, 4, 8));
+        $apiver = bin2hex($apiver[1]);
+        $apiver_dots = hexdec($apiver[0]) . '.' . hexdec($apiver[1]) . '.' . hexdec($apiver[2]);
+        $majorcompat = hexdec($apiver[0]);
+        $calcapi = explode('.', '@API-VER@');
+        if ($calcapi[0] != $majorcompat) {
+            trigger_error('Phar is incompatible API version ' . $apivers_dots . ', but ' .
+                'PHP_Archive is API version @API-VER@');
+            return false;
+        }
+        if ($calcapi[0] === '0') {
+            if ('@API-VER@' != $apiver_dots) {
+                trigger_error('Phar is API version ' . $apiver_dots .
+                    ', but PHP_Archive is API version @API-VER@', E_USER_ERROR);
+                return false;
+            }
+        }
+        $ret = array('compressed' => $apiver[3]);
         $aliaslen = unpack('V', substr($manifest, 8, 12));
-        $alias = substr($manifest, 12, $aliaslen);
+        $ret['alias'] = substr($manifest, 12, $aliaslen);
         $manifest = substr($manifest, 12 + $aliaslen);
-        $ret = array();
         $offset = 0;
         for ($i = 0; $i < $info[1]; $i++) {
             // length of the file name
@@ -329,10 +350,10 @@ class PHP_Archive
             // 2 = compressed filesize
             // 3 = crc32
             // 4 = flags
-            $ret[$savepath] = array_values(unpack('Va/Vb/Vc/Cf', substr($manifest, 0, 13)));
-            $ret[$savepath][5] = $ret[$savepath][3];
-            $ret[$savepath][3] = $offset;
-            $offset += $ret[$savepath][2];
+            $ret['manifest'][$savepath] = array_values(unpack('Va/Vb/Vc/Cf', substr($manifest, 0, 13)));
+            $ret['manifest'][$savepath][5] = $ret[$savepath][3];
+            $ret['manifest'][$savepath][3] = $offset;
+            $offset += $ret['manifest'][$savepath][2];
         }
         return $ret;
     }

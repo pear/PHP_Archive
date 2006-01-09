@@ -117,33 +117,30 @@ if (function_exists('mb_internal_encoding')) {
         if (!$relyOnPhar) {
             // for smooth use of phar extension
             $unpack_code .= "if (!class_exists('PHP_Archive')) {
-if (class_exists('Phar')) {
-class PHP_Archive extends Phar {}
-} else {";
+    if (!class_exists('Phar')) {
+";
             $unpack_code .= $contents;
-            $unpack_code .= "}if (!function_exists('stream_get_wrappers')) {function stream_get_wrappers(){return array();}
-}}
-if (!in_array('phar', stream_get_wrappers())) {
-    stream_wrapper_register('phar', 'PHP_Archive');
+            $unpack_code .= "
+        if (!in_array('phar', stream_get_wrappers())) {
+            stream_wrapper_register('phar', 'PHP_Archive');
+        }
+        PHP_Archive::mapPhar(__FILE__, __COMPILER_HALT_OFFSET__);
+    } else {
+        Phar::mapPhar();
+    }
 }
 ";
         } else {
             $unpack_code .= "if (!extension_loaded('phar')) {";
             $unpack_code .= 'die("Error - phar extension not loaded");
 }
-if (!class_exists(\'PHP_Archive\')) {class PHP_Archive extends Phar {}}';
+Phar::mapPhar();';
         }
         $unpack_code .= <<<PHP
-if (PHP_Archive::APIVersion() != '@API-VER@') {
-die('Error: PHP_Archive must be API version @API-VER@');
-}
 @ini_set('memory_limit', -1);
 PHP;
 
         $this->alias = $alias;
-        $alias = $this->alias ? $this->alias : '@ALIAS@';
-        $unpack_code .= 'PHP_Archive::mapPhar("' . addslashes($alias) . '", ' .
-            ($compress ? 'true' : 'false') . (!$relyOnPhar ? ', __FILE__, __COMPILER_HALT_OFFSET__' : '') . ');';
         if ($init_file) {
             $unpack_code .= '
 
@@ -209,7 +206,7 @@ PHP;
                     DIRECTORY_SEPARATOR . $save_path,
                 'originalsize' => $size,
                 'actualsize' => strlen($file_contents),
-                'crc' => $crc32,
+                'crc32' => $crc32,
                 'flags' => $this->compress ? 1 : 0); // gz compression = 0x1
     }
 
@@ -469,8 +466,9 @@ PHP;
             $manifest[$savepath] = array(
                 $size, // original size = 0
                 time(), // save time = 1
-                $offset, // offset from start of files = 2
-                $info['actualsize']); // actual size in the .phar = 3
+                $info['actualsize'], // actual size in the .phar = 2
+                $info['crc32'], // crc32 = 3
+                $info['flags']); // flags = 4
             $offset += $info['actualsize'];
         }
         $manifest = $this->serializeManifest($manifest);
@@ -514,7 +512,7 @@ PHP;
             // compressed file size
             // crc32
             // flags
-            $ret .= $pack('V', strlen($savepath)) . $savepath . call_user_func_array('pack',
+            $ret .= pack('V', strlen($savepath)) . $savepath . call_user_func_array('pack',
                 array_merge(array('VVVVC'), $info));
         }
         // save the size of the manifest

@@ -1,154 +1,210 @@
-<?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE package SYSTEM "http://pear.php.net/dtd/package-1.0">
-<package version="1.0" packagerversion="1.4.6">
+<?xml version="1.0" encoding="UTF-8"?>
+<package packagerversion="1.4.6" version="2.0" xmlns="http://pear.php.net/dtd/package-2.0" xmlns:tasks="http://pear.php.net/dtd/tasks-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0 http://pear.php.net/dtd/tasks-1.0.xsd http://pear.php.net/dtd/package-2.0 http://pear.php.net/dtd/package-2.0.xsd">
  <name>PHP_Archive</name>
+ <channel>pear.php.net</channel>
  <summary>Create and Use PHP Archive files</summary>
- <description>PHP_Archive allows you to create a single .phar file containing an entire application.
- </description>
- <maintainers>
-  <maintainer>
-   <user>davey</user>
-   <name>Davey Shafik</name>
-   <email>davey@php.net</email>
-   <role>lead</role>
-  </maintainer>
-  <maintainer>
-   <user>cellog</user>
-   <name>Greg Beaver</name>
-   <email>cellog@php.net</email>
-   <role>lead</role>
-  </maintainer>
-  </maintainers>
- <release>
-  <version>0.8.0</version>
-  <date>2005-12-13</date>
-  <license>PHP License</license>
-  <state>alpha</state>
-  <notes>This release is fully compatible with the phar extension
+ <description>PHP_Archive allows you to create a single .phar file containing an entire application.</description>
+ <lead>
+  <name>Davey Shafik</name>
+  <user>davey</user>
+  <email>davey@php.net</email>
+  <active>yes</active>
+ </lead>
+ <lead>
+  <name>Greg Beaver</name>
+  <user>cellog</user>
+  <email>cellog@php.net</email>
+  <active>yes</active>
+ </lead>
+ <date>2006-01-08</date>
+ <time>17:16:03</time>
+ <version>
+  <release>0.8.0</release>
+  <api>0.8.0</api>
+ </version>
+ <stability>
+  <release>alpha</release>
+  <api>alpha</api>
+ </stability>
+ <license uri="http://www.php.net/license">PHP License</license>
+ <notes>This release is fully compatible with the phar extension
+
+Major BC breaks:
+* the entire structure of an internal phar&apos;s manifest has changed
+* mapPhar now only takes 2 parameters
 
 Small BC breaks:
 * PHP_Archive::processFile() was public static and is now private static
-* parameter order change to make phar extension
-Small feature addition:
+
+Feature additions:
 * creating .phars that are reliant on the .phar extension is now possible
-  </notes>
-  <deps>
-   <dep type="php" rel="ge" version="5.1.0b1" optional="no"/>
-   <dep type="pkg" rel="ge" version="1.4.3" optional="no">PEAR</dep>
-  </deps>
-  <filelist>
-   <dir name="/" baseinstalldir="PHP">
-    <dir name="Archive">
-     <file role="php" name="Creator.php">
-      <replace from="@API-VER@" to="api-version" type="package-info"/>
-     </file>
-    </dir> <!-- /Archive -->
-    <dir name="tests">
-     <dir name="filenotfound">
-      <file role="test" name="filenotfound.phar"/>
-      <file role="test" name="makefilenotfoundphar.php.inc"/>
-     </dir> <!-- /tests/filenotfound -->
-     <dir name="longfilename">
-      <file role="test" name="longphar.phar"/>
-      <file role="test" name="makelongphar.php.inc"/>
-     </dir> <!-- /tests/longfilename -->
-     <dir name="opendir">
-      <file role="test" name="makeopendirphar.php.inc"/>
-      <file role="test" name="opendir.phar"/>
-     </dir> <!-- /tests/opendir -->
-     <dir name="planet_php">
-      <file role="test" name="default_phar.php"/>
-     </dir> <!-- /tests/planet_php -->
-     <dir name="require_once">
-      <file role="test" name="makerequire_oncephar.php.inc"/>
-      <file role="test" name="require_once.phar"/>
-     </dir> <!-- /tests/require_once -->
-     <file role="test" name="eof.phpt"/>
-     <file role="test" name="filenotfound.phpt"/>
-     <file role="test" name="filenotfoundtest.php"/>
-     <file role="test" name="gopearphar.php.inc"/>
-     <file role="test" name="longfilename.phpt"/>
-     <file role="test" name="makepearphar.php.inc"/>
-     <file role="test" name="new_phar.phar"/>
-     <file role="test" name="normalstat.phpt"/>
-     <file role="test" name="opendir.phpt"/>
-     <file role="test" name="pearindex.php"/>
-     <file role="test" name="phar.log"/>
-     <file role="test" name="phpt_test.php.inc"/>
-     <file role="test" name="require_once.phpt"/>
-     <file role="test" name="savetest.php"/>
-     <file role="test" name="seek.phpt"/>
-     <file role="test" name="streamstat.phpt"/>
-     <file role="test" name="test.php"/>
-     <file role="test" name="test1.php"/>
-     <file role="test" name="test_path.php"/>
-     <file role="test" name="test_phar.phar"/>
-     <file role="test" name="test_phar2.phar"/>
-     <file role="test" name="test_require.php"/>
-     <file role="test" name="test_tar.tar"/>
-    </dir> <!-- /tests -->
-    <file role="php" name="Archive.php">
-     <replace from="@API-VER@" to="api-version" type="package-info"/>
+* new PHP_Archive_Manager is available for debugging phars</notes>
+ <contents>
+  <dir baseinstalldir="PHP" name="/">
+   <dir name="Archive">
+    <file name="Creator.php" role="php">
+     <tasks:replace from="@API-VER@" to="api-version" type="package-info" />
     </file>
-   </dir> <!-- / -->
-  </filelist>
- </release>
+    <file name="Exception.php" role="php" />
+    <file name="Manager.php" role="php" />
+   </dir> <!-- /Archive -->
+   <dir name="tests">
+    <dir name="filenotfound">
+     <file name="filenotfound.phar" role="test" />
+     <file name="makefilenotfoundphar.php.inc" role="test" />
+    </dir> <!-- /tests/filenotfound -->
+    <dir name="longfilename">
+     <file name="longphar.phar" role="test" />
+     <file name="makelongphar.php.inc" role="test" />
+    </dir> <!-- /tests/longfilename -->
+    <dir name="opendir">
+     <file name="makeopendirphar.php.inc" role="test" />
+     <file name="opendir.phar" role="test" />
+    </dir> <!-- /tests/opendir -->
+    <dir name="planet_php">
+     <file name="default_phar.php" role="test" />
+    </dir> <!-- /tests/planet_php -->
+    <dir name="require_once">
+     <file name="makerequire_oncephar.php.inc" role="test" />
+     <file name="require_once.phar" role="test" />
+    </dir> <!-- /tests/require_once -->
+    <file name="eof.phpt" role="test" />
+    <file name="filenotfound.phpt" role="test" />
+    <file name="filenotfoundtest.php" role="test" />
+    <file name="filenotfound_phar.phpt" role="test" />
+    <file name="gopearphar.php.inc" role="test" />
+    <file name="longfilename.phpt" role="test" />
+    <file name="makepearphar.php.inc" role="test" />
+    <file name="new_phar.phar" role="test" />
+    <file name="normalstat.phpt" role="test" />
+    <file name="normalstat_phar.phpt" role="test" />
+    <file name="opendir.phpt" role="test" />
+    <file name="pearindex.php" role="test" />
+    <file name="phar.log" role="test" />
+    <file name="phpt_test.php.inc" role="test" />
+    <file name="require_once.phpt" role="test" />
+    <file name="require_once_phar.phpt" role="test" />
+    <file name="savetest.php" role="test" />
+    <file name="seek.phpt" role="test" />
+    <file name="seek_phar.phpt" role="test" />
+    <file name="streamstat.phpt" role="test" />
+    <file name="streamstat_phar.phpt" role="test" />
+    <file name="test.php" role="test" />
+    <file name="test1.php" role="test" />
+    <file name="test_path.php" role="test" />
+    <file name="test_phar.phar" role="test" />
+    <file name="test_phar2.phar" role="test" />
+    <file name="test_require.php" role="test" />
+    <file name="test_tar.tar" role="test" />
+   </dir> <!-- /tests -->
+   <file name="Archive.php" role="php">
+    <tasks:replace from="@API-VER@" to="api-version" type="package-info" />
+   </file>
+  </dir> <!-- / -->
+ </contents>
+ <dependencies>
+  <required>
+   <php>
+    <min>5.1.0</min>
+   </php>
+   <pearinstaller>
+    <min>1.4.3</min>
+   </pearinstaller>
+   <package>
+    <name>PEAR</name>
+    <channel>pear.php.net</channel>
+    <min>1.4.3</min>
+   </package>
+  </required>
+ </dependencies>
+ <phprelease />
  <changelog>
-   <release>
-    <version>0.8.0</version>
-    <date>2005-12-13</date>
-    <license>PHP License</license>
-    <state>alpha</state>
-    <notes>This release is fully compatible with the phar extension
+  <release>
+   <version>
+    <release>0.8.0</release>
+    <api>0.8.0</api>
+   </version>
+   <stability>
+    <release>alpha</release>
+    <api>alpha</api>
+   </stability>
+   <date>2006-01-08</date>
+   <license>PHP License</license>
+   <notes>This release is fully compatible with the phar extension
+
+Major BC breaks:
+* the entire structure of an internal phar&apos;s manifest has changed
+* mapPhar now only takes 2 parameters
 
 Small BC breaks:
 * PHP_Archive::processFile() was public static and is now private static
-* parameter order change to make phar extension
-Small feature addition:
+
+Feature additions:
 * creating .phars that are reliant on the .phar extension is now possible
-    </notes>
-   </release>
-   <release>
-    <version>0.7.0</version>
-    <date>2005-11-30</date>
-    <license>PHP License</license>
-    <state>alpha</state>
-    <notes>major refactoring - .tar file format is no longer used
+* new PHP_Archive_Manager is available for debugging phars</notes>
+  </release>
+  <release>
+   <version>
+    <release>0.7.0</release>
+    <api>0.7.0</api>
+   </version>
+   <stability>
+    <release>alpha</release>
+    <api>alpha</api>
+   </stability>
+   <date>2005-11-30</date>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>major refactoring - .tar file format is no longer used
 DRAMATIC improvement in efficiency of disk use, memory usage,
-and processing speed.
-    </notes>
-   </release>
-   <release>
-    <version>0.6.1</version>
-    <date>2005-09-05</date>
-    <license>PHP License</license>
-    <state>alpha</state>
-    <notes>Bugfix release
+and processing speed.</notes>
+  </release>
+  <release>
+   <version>
+    <release>0.6.1</release>
+    <api>0.6.1</api>
+   </version>
+   <stability>
+    <release>alpha</release>
+    <api>alpha</api>
+   </stability>
+   <date>2005-09-05</date>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>Bugfix release
  * fix faulty dependency on unreleased Archive_Tar
- * fix version_compare()&apos;s bungling of versioning ending with -dev
-    </notes>
-   </release>
-   <release>
-    <version>0.6.0</version>
-    <date>2005-08-14</date>
-    <license>PHP License</license>
-    <state>alpha</state>
-    <notes>Bugfix release
+ * fix version_compare()&apos;s bungling of versioning ending with -dev</notes>
+  </release>
+  <release>
+   <version>
+    <release>0.6.0</release>
+    <api>0.6.0</api>
+   </version>
+   <stability>
+    <release>alpha</release>
+    <api>alpha</api>
+   </stability>
+   <date>2005-08-14</date>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>Bugfix release
  * change error_reporting to E_ALL.  Was stupidly using
    E_ERROR | E_WARNING | E_PARSE | E_NOTICE
  * change __HALT_PHP_PARSER__ to __HALT_COMPILER()
  * rework fread() usage to avoid all potential bugs with chunks
    larger than 8192
  * drop support for PHP 4.3.x and 5.0.x.  Streams are impossible to
-   fully support due to bugs in all PHP versions &lt; 5.1.0.
-    </notes>
-   </release>
-   <release>
-    <version>0.5.0</version>
-    <date>2005-05-03</date>
-    <license>PHP License</license>
-    <state>alpha</state>
-    <notes>* Full support for multiple .phars! phar://pharname.phar/file
+   fully support due to bugs in all PHP versions &lt; 5.1.0.</notes>
+  </release>
+  <release>
+   <version>
+    <release>0.5.0</release>
+    <api>0.5.0</api>
+   </version>
+   <stability>
+    <release>alpha</release>
+    <api>alpha</api>
+   </stability>
+   <date>2005-05-03</date>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>* Full support for multiple .phars! phar://pharname.phar/file
    and phar://phar2.phar/anotherfile will work now
  * Fix gz compression
  * remove Archive_Tar dep for non-creation
@@ -156,40 +212,59 @@ and processing speed.
  * bundle PHP_Archive in all created .phars - standalone! Only
    compressed .phars have a dep on zlib
  * Add support for filenames &gt; 100 characters in length and unit test
- * Add full support for stat()/is_file()/is_dir()/is_readable() etc., opendir()/readdir()
-    </notes>
-   </release>
-   <release>
-    <version>0.4.0</version>
-    <date>2004-11-29</date>
-    <license>PHP License</license>
-    <state>alpha</state>
-    <notes>Made PHP_Archive_Creator smarter
-    </notes>
-   </release>
-   <release>
-    <version>0.3.0</version>
-    <date>2004-07-06</date>
-    <license>PHP License</license>
-    <state>alpha</state>
-    <notes>Added Stream Seek
-    </notes>
-   </release>
-   <release>
-    <version>0.2.0</version>
-    <date>2004-06-14</date>
-    <license>PHP License</license>
-    <state>alpha</state>
-    <notes>First PEPr Release
-    </notes>
-   </release>
-   <release>
-    <version>0.1.0</version>
-    <date>2004-06-13</date>
-    <license>PHP License</license>
-    <state>alpha</state>
-    <notes>First Package
-    </notes>
-   </release>
+ * Add full support for stat()/is_file()/is_dir()/is_readable() etc., opendir()/readdir()</notes>
+  </release>
+  <release>
+   <version>
+    <release>0.4.0</release>
+    <api>0.4.0</api>
+   </version>
+   <stability>
+    <release>alpha</release>
+    <api>alpha</api>
+   </stability>
+   <date>2004-11-29</date>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>Made PHP_Archive_Creator smarter</notes>
+  </release>
+  <release>
+   <version>
+    <release>0.3.0</release>
+    <api>0.3.0</api>
+   </version>
+   <stability>
+    <release>alpha</release>
+    <api>alpha</api>
+   </stability>
+   <date>2004-07-06</date>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>Added Stream Seek</notes>
+  </release>
+  <release>
+   <version>
+    <release>0.2.0</release>
+    <api>0.2.0</api>
+   </version>
+   <stability>
+    <release>alpha</release>
+    <api>alpha</api>
+   </stability>
+   <date>2004-06-14</date>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>First PEPr Release</notes>
+  </release>
+  <release>
+   <version>
+    <release>0.1.0</release>
+    <api>0.1.0</api>
+   </version>
+   <stability>
+    <release>alpha</release>
+    <api>alpha</api>
+   </stability>
+   <date>2004-06-13</date>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>First Package</notes>
+  </release>
  </changelog>
 </package>

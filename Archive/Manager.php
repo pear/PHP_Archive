@@ -9,6 +9,11 @@
  * Needed for file manipulation
  */
 require_once 'System.php';
+
+define('PHP_ARCHIVE_MANAGER_COMPRESSED', 0x1);
+
+define('PHP_ARCHIVE_MANAGER_COMPRESSED_GZ', 0x1);
+
 /**
  *
  * @copyright Copyright ? Gregory Beaver
@@ -19,12 +24,15 @@ require_once 'System.php';
  */
 class PHP_Archive_Manager
 {
+    private $_alias;
     private $_archiveName;
+    private $_apiVersion;
     private $_compressed;
-    private $_version = 'unknown';
+    private $_knownAPIVersions = array('0.8.0');
     private $_manifest;
     private $_fileStart;
     private $_manifestSize;
+    private $_html;
     /**
      * Locate the .phar archive in the include_path and detect the file to open within
      * the archive.
@@ -36,42 +44,10 @@ class PHP_Archive_Manager
      * @param string a file within the archive
      * @return string the filename within the .phar to retrieve
      */
-    public function __construct($phar, $compressed = false)
+    public function __construct($phar)
     {
         $this->_archiveName = $phar;
-        $this->_compressed = $compressed;
         $this->validate();
-        $fp = fopen($this->_archiveName, 'rb');
-        $header = fread($fp, strlen('<?php #PHP_ARCHIVE_HEADER-'));
-        if ($header == '<?php #PHP_ARCHIVE_HEADER-') {
-            $version = '';
-            while (!feof($fp) && $c = fgetc($fp)) {
-                $version .= $c;
-            }
-            if (version_compare($version, '0.7.1', '<')) {
-                require_once 'PHP/Archive/Exception.php';
-                throw new PHP_Archive_Exception($phar . ' was created with obsolete PHP_Archive');
-            }
-            $this->_version = $version;
-        }
-        // seek to __HALT_COMPILER_OFFSET__
-        $prev = '';
-        while (!feof($fp) && false != ($next = fread($fp, 8092))) {
-            $prev .= $next;
-            if (false != ($t = strpos($prev, '__HALT_COMPILER();'))) {
-                if ($t + strlen('__HALT_COMPILER();') - strlen($next)) {
-                    // seek backwards to location
-                    fseek($fp, $t + strlen('__HALT_COMPILER();') - strlen($next), SEEK_CUR);
-                }
-                break;
-            }
-            $prev = $next;
-        }
-        $manifest_length = unpack('Vlen', fread($fp, 4));
-        $this->_manifest =
-            $this->_unserializeManifest(fread($fp, $manifest_length['len']));
-        $this->_fileStart = ftell($fp);
-        fclose($fp);
     }
 
     /**
@@ -91,10 +67,13 @@ class PHP_Archive_Manager
         $header = fread($fp, strlen('<?php #PHP_ARCHIVE_HEADER-'));
         if ($header == '<?php #PHP_ARCHIVE_HEADER-') {
             $version = '';
-            while (!feof($fp) && $c = fgetc($fp)) {
+            while (!feof($fp) && (false !== $c = fgetc($fp))) {
+                if ((ord($c) < ord('0') || ord($c) > ord('9')) && $c != '.') {
+                    break;
+                }
                 $version .= $c;
             }
-            if (version_compare($version, '0.7', '<')) {
+            if (version_compare($version, '0.8.0', '<')) {
                 throw new PHP_Archive_Exception($phar . ' was created with obsolete PHP_Archive',
                     $errors);
             }
@@ -106,10 +85,7 @@ class PHP_Archive_Manager
         while (!feof($fp) && false != ($next = fread($fp, 8092))) {
             $prev .= $next;
             if (false != ($t = strpos($prev, '__HALT_COMPILER();'))) {
-                if ($t + strlen('__HALT_COMPILER();') - strlen($next)) {
-                    // seek backwards to location
-                    fseek($fp, $t + strlen('__HALT_COMPILER();') - strlen($next), SEEK_CUR);
-                }
+                fseek($fp, $t - strlen($prev) + strlen('__HALT_COMPILER();'), SEEK_CUR);
                 $found = true;
                 break;
             }
@@ -119,8 +95,9 @@ class PHP_Archive_Manager
             throw new PHP_Archive_ExceptionExtended(PHP_Archive_ExceptionExtended::NOTPHAR,
                 array('archive' => $this->_archiveName));
         }
-        $manifest_length = unpack('Vlen', fread($fp, 4));
-        $manifest_length = $manifest_length['len'];
+        $manifest_length = fread($fp, 4);
+        $manifest_length = unpack('Vlen', $manifest_length);
+        $this->_manifestSize = $manifest_length = $manifest_length['len'];
         if ($manifest_length > 1048576) {
             if ($strict) {
                 throw new PHP_Archive_ExceptionExtended(
@@ -134,7 +111,7 @@ class PHP_Archive_Manager
         $manifest = fread($fp, $manifest_length);
         // retrieve the number of files in the manifest
         $info = unpack('V', substr($manifest, 0, 4));
-        if ($info[1] > $manifest_length * 16) {
+        if ($info[1] * 17 > $manifest_length) {
             $errors[] = new PHP_Archive_ExceptionExtended(
                 PHP_Archive_ExceptionExtended::MANIFESTENTRIESOVERFLOW,array(
                 'archive' => $this->_archiveName));
@@ -147,7 +124,38 @@ class PHP_Archive_Manager
                 'archive' => $this->_archiveName));
             throw new PHP_Archive_Exception('invalid phar "' . $this->_archiveName . '"', $errors);
         }
+        // get API version and compressed flag
+        $apiver = substr($manifest, 0, 2);
+        $this->_compressed = $apiver[1] & PHP_ARCHIVE_MANAGER_COMPRESSED;
+        $apiver = bin2hex($apiver);
+        $this->_apiVersion = $apiver[0] . '.' . $apiver[1] . '.' . $apiver[2];
+        if (!in_array($this->_apiVersion, $this->_knownAPIVersions)) {
+            $errors[] = new PHP_Archive_ExceptionExtended(
+                PHP_Archive_ExceptionExtended::UNKNOWNAPI, array(
+                'archive' => $this->_archiveName, 'ver' => $this->_apiVersion));
+            throw new PHP_Archive_Exception('phar "' . $this->_archiveName . '" cannot be analyzed', $errors);
+        }
+        $manifest = substr($manifest, 2);
+        if (strlen($manifest) < 4) {
+            $errors[] = new PHP_Archive_ExceptionExtended(
+                PHP_Archive_ExceptionExtended::MANIFESTENTRIESUNDERFLOW, array(
+                'archive' => $this->_archiveName));
+            throw new PHP_Archive_Exception('invalid phar "' . $this->_archiveName . '"', $errors);
+        }
+        // get alias
+        $aliaslen = unpack('V', substr($manifest, 0, 4));
+        $aliaslen = $aliaslen[1];
+        $manifest = substr($manifest, 4);
+        if (strlen($manifest) < $aliaslen) {
+            $errors[] = new PHP_Archive_ExceptionExtended(
+                PHP_Archive_ExceptionExtended::MANIFESTENTRIESUNDERFLOW, array(
+                'archive' => $this->_archiveName));
+            throw new PHP_Archive_Exception('invalid phar "' . $this->_archiveName . '"', $errors);
+        }
+        $this->_alias = substr($manifest, 0, $aliaslen);
+        $manifest = substr($manifest, $aliaslen);
         $ret = array();
+        $offset = 0;
         for ($i = 0; $i < $info[1]; $i++) {
             if (strlen($manifest) < 4) {
                 if (isset($savepath)) {
@@ -189,7 +197,7 @@ class PHP_Archive_Manager
             }
             $savepath = substr($manifest, 4, $len[1]);
             $manifest = substr($manifest, $len[1] + 4);
-            if (strlen($manifest) < 16) {
+            if (strlen($manifest) < 17) {
                 if (isset($savepath)) {
                     $errors[] = new PHP_Archive_ExceptionExtended(
                         PHP_Archive_ExceptionExtended::MANIFESTENTRIESTRUNCATEDENTRY, array(
@@ -206,53 +214,41 @@ class PHP_Archive_Manager
             }
             // retrieve manifest data:
             // 0 = uncompressed file size
-            // 1 = timestamp of when file was added to phar
-            // 2 = offset of file within phar relative to internal file's start
-            // 3 = compressed file size (actual size in the phar)
-            $ret[$savepath] = array_values(unpack('Va/Vb/Vc/Vd', substr($manifest, 0, 16)));
-            $manifest = substr($manifest, 16);
+            // 1 = save timestamp
+            // 2 = compressed file size
+            // 3 = crc32
+            // 4 = flags
+            $ret[$savepath] = array_values(unpack('Va/Vb/Vc/Vd/Ce', substr($manifest, 0, 17)));
+            $ret[$savepath][5] = $offset;
+            $offset += $ret[$savepath][2];
+            $manifest = substr($manifest, 17);
         }
         $this->_manifest =  $ret;
         $this->_fileStart = ftell($fp);
         foreach ($this->_manifest as $path => $info) {
             $currentFilename = $path;
-            // actual file length in file includes 8-byte header
-            $internalFileLength = $info[3] - 8;
+            $internalFileLength = $info[2];
             // seek to offset of file header within the .phar
-            if (!@fseek($this->fp, $this->_fileStart + $info[2])) {
+            if (fseek($fp, $this->_fileStart + $info[5])) {
                 $errors[] = new PHP_Archive_ExceptionExtended(
                     PHP_Archive_ExceptionExtended::FILELOCATIONINVALID,
-                    array('file' => $path, 'loc' => $this->_fileStart + $info[2],
+                    array('file' => $path, 'loc' => $this->_fileStart + $info[5],
                     'size' => filesize($this->_archiveName)));
                 continue;
             }
-            $tdata = @fread($this->fp, 8);
-            if (strlen($tdata) < 8) {
-                $errors[] = new PHP_Archive_ExceptionExtended(
-                    PHP_Archive_ExceptionExtended::FILETRUNCATED,
-                    array('file' => $path, 'loc' => $this->_fileStart + $info[2]));
-                continue;
-            }
-            $temp = @unpack("Vcrc32/Visize", $tdata);
-            if (!$temp) {
-                $errors[] = new PHP_Archive_ExceptionExtended(
-                    PHP_Archive_ExceptionExtended::FILECORRUPTEDCRCSIZE,
-                    array('file' => $path, 'loc' => $this->_fileStart + $info[2]));
-                continue;
-            }
+            $temp = array('crc32' => $info[3], 'isize' => $info[0]);
             $data = '';
-            $count = $this->internalFileLength;
+            $count = $internalFileLength;
             while ($count) {
                 if ($count < 8192) {
-                    $data .= @fread($this->fp, $count);
+                    $data .= @fread($fp, $count);
                     $count = 0;
                 } else {
                     $count -= 8192;
-                    $data .= @fread($this->fp, 8192);
+                    $data .= @fread($fp, 8192);
                 }
             }
-            @fclose($this->fp);
-            if ($this->_compressed) {
+            if ($info[4 & PHP_ARCHIVE_MANAGER_COMPRESSED_GZ]) {
                 $data = @gzinflate($data);
                 if ($data === false) {
                     $errors[] = new PHP_Archive_ExceptionExtended(
@@ -260,11 +256,11 @@ class PHP_Archive_Manager
                         array('file' => $path, 'loc' => $this->_fileStart + $info[2]));
                 }
             }
-            if ($temp['isize'] != $info[0]) {
+            if ($temp['isize'] != strlen($data)) {
                 $errors[] = new PHP_Archive_ExceptionExtended(
                     PHP_Archive_ExceptionExtended::FILECORRUPTEDSIZE,
                     array('file' => $path, 'expected' => $temp['isize'],
-                        'actual' => $info[0]));
+                        'actual' => strlen($data)));
             }
             if ($temp['crc32'] != crc32($data)) {
                 $errors[] = new PHP_Archive_ExceptionExtended(
@@ -273,10 +269,10 @@ class PHP_Archive_Manager
                         'actual' => crc32($data)));
             }
         }
+        @fclose($fp);
         if (count($errors)) {
             throw new PHP_Archive_Exception('invalid phar "' . $this->_archiveName . '"', $errors);
         }
-        fclose($fp);
     }
 
     /**
@@ -294,19 +290,39 @@ class PHP_Archive_Manager
         $ret = array(
             'Phar name' => $this->_archiveName,
             'Size' => $filesize,
-            'API version' => '0.7.1',
+            'API version' => $this->_apiVersion,
             'Manifest size (bytes)' => $this->_manifestSize,
             'Manifest entries' => count($this->_manifest),
-            
+            'Alias' => $this->_alias,
+            'Global compressed flag' => $this->_compressed,
         );
+        // 0 = uncompressed file size
+        // 1 = save timestamp
+        // 2 = compressed file size
+        // 3 = crc32
+        // 4 = flags
+        foreach ($this->_manifest as $file => $info) {
+            $ret['File phar://' . $this->_alias . '/' . $file . ' size'] = $info[0];
+            $ret['File phar://' . $this->_alias . '/' . $file . ' save date'] =
+                date('Y-m-d H:i', $info[1]);
+            $ret['File phar://' . $this->_alias . '/' . $file . ' crc'] = $info[3];
+            $ret['File phar://' . $this->_alias . '/' . $file . ' size in archive'] = $info[2];
+            $ret['File phar://' . $this->_alias . '/' . $file . ' GZ compressed'] =
+                $info[4] & PHP_ARCHIVE_MANAGER_COMPRESSED_GZ ? 'yes' : 'no';
+        }
         return $ret;
     }
 
     public function __toString()
     {
         $ret = $this->dump(true);
-        $ret = array_map(create_function('$a, &$b', '$b = "$a: $b";'), $ret);
-        $ret = implode("\n", $ret);
+        if ($this->_html) {
+            array_walk($ret, create_function('&$a, $b', '$a = "<strong>$b:</strong> $a";'));
+            $ret = implode("<br />\n", $ret);
+        } else {
+            array_walk($ret, create_function('&$a, $b', '$a = "$b: $a";'));
+            $ret = implode("\n", $ret);
+        }
         return $ret;
     }
 
@@ -331,33 +347,16 @@ class PHP_Archive_Manager
     }
 
     /**
-     * Enter description here...
+     * For display of data in a browser
      *
-     * @param unknown_type $manifest
-     * @return unknown
+     * @return PHP_Archive_Manager
      */
-    private function _unserializeManifest($manifest)
+    public function inHtml()
     {
-        // retrieve the number of files in the manifest
-        $info = unpack('V', substr($manifest, 0, 4));
-        $manifest = substr($manifest, 4);
-        $this->_manifestSize = strlen($manifest);
-        $ret = array();
-        for ($i = 0; $i < $info[1]; $i++) {
-            // length of the file name
-            $len = unpack('V', substr($manifest, 0, 4));
-            // file name
-            $savepath = substr($manifest, 4, $len[1]);
-            $manifest = substr($manifest, $len[1] + 4);
-            // retrieve manifest data:
-            // 0 = uncompressed file size
-            // 1 = timestamp of when file was added to phar
-            // 2 = offset of file within phar relative to internal file's start
-            // 3 = compressed file size (actual size in the phar)
-            $ret[$savepath] = array_values(unpack('Va/Vb/Vc/Vd', substr($manifest, 0, 16)));
-            $manifest = substr($manifest, 16);
-        }
-        return $ret;
+        $this->_html = true;
+        $a = clone $this;
+        $this->_html = false;
+        return $a;
     }
 }
 ?>
