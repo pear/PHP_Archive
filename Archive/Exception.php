@@ -59,7 +59,7 @@ class PHP_Archive_ExceptionExtended extends PHP_Archive_Exception
             $message = "ERROR UNKNOWN PHP_Archive_Exception CODE: '$code'";
         }
         foreach ($errorData as $var => $value) {
-            if (!is_string($value)) {
+            if (!is_string($value) && !is_numeric($value)) {
                 die('Fatal Error: only strings can be used in errorData for PHP_Archive_ExceptionExtended');
             }
             $message = str_replace('%' . $var . '%', $value, $message);

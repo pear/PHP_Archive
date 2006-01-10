@@ -121,13 +121,13 @@ if (function_exists('mb_internal_encoding')) {
 ";
             $unpack_code .= $contents;
             $unpack_code .= "
-        if (!in_array('phar', stream_get_wrappers())) {
-            stream_wrapper_register('phar', 'PHP_Archive');
-        }
         PHP_Archive::mapPhar(__FILE__, __COMPILER_HALT_OFFSET__);
     } else {
         Phar::mapPhar();
     }
+}
+if (class_exists('PHP_Archive') && !in_array('phar', stream_get_wrappers())) {
+    stream_wrapper_register('phar', 'PHP_Archive');
 }
 ";
         } else {

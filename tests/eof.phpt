@@ -19,7 +19,7 @@ $phpunit = new PEAR_PHPTest(true);
 $fp = fopen('phar://longphar.phar/testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttest.php', 'r');
 var_dump(feof($fp), ftell($fp));
 fseek($fp, filesize('phar://longphar.phar/testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttest.php'));
-fread($fp, 2);
+fread($fp, 10);
 var_dump(feof($fp), ftell($fp));
 fclose($fp);
 echo 'tests done';

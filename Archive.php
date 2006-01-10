@@ -6,6 +6,10 @@
  * @category PHP
  */
 /**
+ * Flag for GZ compression
+ */
+define('PHP_ARCHIVE_COMPRESSED', 1);
+/**
  * PHP_Archive Class (implements .phar)
  *
  * PHAR files a singular archive from which an entire application can run.
@@ -132,16 +136,17 @@ class PHP_Archive
             $fp = fopen($file, 'rb');
             // seek to __HALT_COMPILER_OFFSET__
             fseek($fp, $dataoffset);
-            $manifest_length = unpack('Vlen', fread($fp, 4));
-            $info = $this->_unserializeManifest(fread($fp, $manifest_length['len']));
+            $manifest_length = fread($fp, 4);
+            $manifest_length = unpack('Vlen', $manifest_length);
+            $info = self::_unserializeManifest(fread($fp, $manifest_length['len']));
             if (!$info) {
                 die; // error declared in unserializeManifest
             }
-            fclose($fp);
             $alias = $info['alias'];
             self::$_manifest[$file] = $info['manifest'];
             $compressed = $info['compressed'];
             self::$_fileStart[$file] = ftell($fp);
+            fclose($fp);
         }
         if ($compressed) {
             if (!function_exists('gzinflate')) {
@@ -213,10 +218,10 @@ class PHP_Archive
             );
         $this->currentFilename = $path;
         // actual file length in file includes 8-byte header
-        $this->internalFileLength = self::$_manifest[$this->_archiveName][$path][3] - 8;
+        $this->internalFileLength = self::$_manifest[$this->_archiveName][$path][2];
         // seek to offset of file header within the .phar
         if (is_resource(@$this->fp)) {
-            fseek($this->fp, self::$_fileStart[$this->_archiveName] + self::$_manifest[$this->_archiveName][$path][2]);
+            fseek($this->fp, self::$_fileStart[$this->_archiveName] + self::$_manifest[$this->_archiveName][$path][3]);
         }
     }
 
@@ -233,7 +238,8 @@ class PHP_Archive
             return array('Error: cannot open phar "' . $this->_archiveName . '"');
         }
         if (($e = $this->selectFile($path, false)) === true) {
-            $temp = unpack("Vcrc32/Visize", fread($this->fp, 8));
+            $temp = array('crc32' => self::$_manifest[$this->_archiveName][$path][5],
+                          'isize' => self::$_manifest[$this->_archiveName][$path][0]);
             $data = '';
             $count = $this->internalFileLength;
             while ($count) {
@@ -246,7 +252,7 @@ class PHP_Archive
                 }
             }
             @fclose($this->fp);
-            if ($this->_compressed) {
+            if (self::$_manifest[$this->_archiveName][$path][4] & PHP_ARCHIVE_COMPRESSED) {
                 $data = gzinflate($data);
             }
             if (!isset(self::$_manifest[$this->_archiveName][$path]['ok'])) {
@@ -316,13 +322,13 @@ class PHP_Archive
     {
         // retrieve the number of files in the manifest
         $info = unpack('V', substr($manifest, 0, 4));
-        $apiver = unpack('V', substr($manifest, 4, 8));
-        $apiver = bin2hex($apiver[1]);
+        $apiver = substr($manifest, 4, 2);
+        $apiver = bin2hex($apiver);
         $apiver_dots = hexdec($apiver[0]) . '.' . hexdec($apiver[1]) . '.' . hexdec($apiver[2]);
         $majorcompat = hexdec($apiver[0]);
         $calcapi = explode('.', '@API-VER@');
         if ($calcapi[0] != $majorcompat) {
-            trigger_error('Phar is incompatible API version ' . $apivers_dots . ', but ' .
+            trigger_error('Phar is incompatible API version ' . $apiver_dots . ', but ' .
                 'PHP_Archive is API version @API-VER@');
             return false;
         }
@@ -333,10 +339,15 @@ class PHP_Archive
                 return false;
             }
         }
-        $ret = array('compressed' => $apiver[3]);
-        $aliaslen = unpack('V', substr($manifest, 8, 12));
-        $ret['alias'] = substr($manifest, 12, $aliaslen);
-        $manifest = substr($manifest, 12 + $aliaslen);
+        $ret = array('compressed' => false);
+        // PHP_Archive-based phars must define an alias
+        $aliaslen = unpack('V', substr($manifest, 6, 10));
+        $aliaslen = $aliaslen[1];
+        if (!$aliaslen) {
+            die('Error: alias must be defined for a PHP_Archive-based phar');
+        }
+        $ret['alias'] = substr($manifest, 10, $aliaslen);
+        $manifest = substr($manifest, 10 + $aliaslen);
         $offset = 0;
         for ($i = 0; $i < $info[1]; $i++) {
             // length of the file name
@@ -350,10 +361,14 @@ class PHP_Archive
             // 2 = compressed filesize
             // 3 = crc32
             // 4 = flags
-            $ret['manifest'][$savepath] = array_values(unpack('Va/Vb/Vc/Cf', substr($manifest, 0, 13)));
-            $ret['manifest'][$savepath][5] = $ret[$savepath][3];
+            $ret['manifest'][$savepath] = array_values(unpack('Va/Vb/Vc/Vd/Cf', substr($manifest, 0, 17)));
+            $ret['manifest'][$savepath][5] = $ret['manifest'][$savepath][3];
             $ret['manifest'][$savepath][3] = $offset;
+            if ($ret['manifest'][$savepath][4] & PHP_ARCHIVE_COMPRESSED) {
+                $ret['compressed'] = true;
+            }
             $offset += $ret['manifest'][$savepath][2];
+            $manifest = substr($manifest, 17);
         }
         return $ret;
     }
