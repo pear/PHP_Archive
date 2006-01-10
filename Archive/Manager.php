@@ -358,5 +358,4 @@ class PHP_Archive_Manager
         return $a;
     }
 }
-echo new PHP_Archive_Manager('/home/cellog/pear/PHP_Archive/tests/longfilename/longphar.phar');
 ?>
