@@ -232,7 +232,7 @@ class PHP_Archive_Manager
             if (fseek($fp, $this->_fileStart + $info[5])) {
                 $errors[] = new PHP_Archive_ExceptionExtended(
                     PHP_Archive_ExceptionExtended::FILELOCATIONINVALID,
-                    array('file' => $path, 'loc' => $this->_fileStart + $info[5],
+                    array('archive' => $this->_archiveName, 'file' => $path, 'loc' => $this->_fileStart + $info[5],
                     'size' => filesize($this->_archiveName)));
                 continue;
             }
@@ -253,19 +253,19 @@ class PHP_Archive_Manager
                 if ($data === false) {
                     $errors[] = new PHP_Archive_ExceptionExtended(
                         PHP_Archive_ExceptionExtended::FILECORRUPTEDGZ,
-                        array('file' => $path, 'loc' => $this->_fileStart + $info[2]));
+                        array('archive' => $this->_archiveName, 'file' => $path, 'loc' => $this->_fileStart + $info[2]));
                 }
             }
             if ($temp['isize'] != strlen($data)) {
                 $errors[] = new PHP_Archive_ExceptionExtended(
                     PHP_Archive_ExceptionExtended::FILECORRUPTEDSIZE,
-                    array('file' => $path, 'expected' => $temp['isize'],
+                    array('archive' => $this->_archiveName, 'file' => $path, 'expected' => $temp['isize'],
                         'actual' => strlen($data)));
             }
             if ($temp['crc32'] != crc32($data)) {
                 $errors[] = new PHP_Archive_ExceptionExtended(
                     PHP_Archive_ExceptionExtended::FILECORRUPTEDCRC,
-                    array('file' => $path, 'expected' => $temp['crc32'],
+                    array('archive' => $this->_archiveName, 'file' => $path, 'expected' => $temp['crc32'],
                         'actual' => crc32($data)));
             }
         }
