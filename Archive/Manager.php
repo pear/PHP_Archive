@@ -10,7 +10,6 @@
  */
 require_once 'System.php';
 
-define('PHP_ARCHIVE_MANAGER_COMPRESSED', 0x1);
 
 define('PHP_ARCHIVE_MANAGER_COMPRESSED_GZ', 0x1);
 
@@ -126,7 +125,6 @@ class PHP_Archive_Manager
         }
         // get API version and compressed flag
         $apiver = substr($manifest, 0, 2);
-        $this->_compressed = $apiver[1] & PHP_ARCHIVE_MANAGER_COMPRESSED;
         $apiver = bin2hex($apiver);
         $this->_apiVersion = $apiver[0] . '.' . $apiver[1] . '.' . $apiver[2];
         if (!in_array($this->_apiVersion, $this->_knownAPIVersions)) {
@@ -220,6 +218,7 @@ class PHP_Archive_Manager
             // 4 = flags
             $ret[$savepath] = array_values(unpack('Va/Vb/Vc/Vd/Ce', substr($manifest, 0, 17)));
             $ret[$savepath][5] = $offset;
+            $this->_compressed = $ret[$savepath][4] & PHP_ARCHIVE_MANAGER_COMPRESSED_GZ;
             $offset += $ret[$savepath][2];
             $manifest = substr($manifest, 17);
         }
@@ -248,7 +247,7 @@ class PHP_Archive_Manager
                     $data .= @fread($fp, 8192);
                 }
             }
-            if ($info[4 & PHP_ARCHIVE_MANAGER_COMPRESSED_GZ]) {
+            if ($info[4] & PHP_ARCHIVE_MANAGER_COMPRESSED_GZ) {
                 $data = @gzinflate($data);
                 if ($data === false) {
                     $errors[] = new PHP_Archive_ExceptionExtended(
