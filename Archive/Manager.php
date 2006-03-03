@@ -126,7 +126,8 @@ class PHP_Archive_Manager
         // get API version and compressed flag
         $apiver = substr($manifest, 0, 2);
         $apiver = bin2hex($apiver);
-        $this->_apiVersion = $apiver[0] . '.' . $apiver[1] . '.' . $apiver[2];
+        $this->_apiVersion = hexdec($apiver[0]) . '.' . hexdec($apiver[1]) .
+            '.' . hexdec($apiver[2]);
         if (!in_array($this->_apiVersion, $this->_knownAPIVersions)) {
             $errors[] = new PHP_Archive_ExceptionExtended(
                 PHP_Archive_ExceptionExtended::UNKNOWNAPI, array(

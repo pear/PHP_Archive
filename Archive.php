@@ -136,8 +136,7 @@ class PHP_Archive
             $fp = fopen($file, 'rb');
             // seek to __HALT_COMPILER_OFFSET__
             fseek($fp, $dataoffset);
-            $manifest_length = fread($fp, 4);
-            $manifest_length = unpack('Vlen', $manifest_length);
+            $manifest_length = unpack('Vlen', fread($fp, 4));
             $info = self::_unserializeManifest(fread($fp, $manifest_length['len']));
             if (!$info) {
                 die; // error declared in unserializeManifest
@@ -217,11 +216,10 @@ class PHP_Archive
             9 => self::$_manifest[$this->_archiveName][$path][1], // creation time
             );
         $this->currentFilename = $path;
-        // actual file length in file includes 8-byte header
         $this->internalFileLength = self::$_manifest[$this->_archiveName][$path][2];
         // seek to offset of file header within the .phar
         if (is_resource(@$this->fp)) {
-            fseek($this->fp, self::$_fileStart[$this->_archiveName] + self::$_manifest[$this->_archiveName][$path][3]);
+            fseek($this->fp, self::$_fileStart[$this->_archiveName] + self::$_manifest[$this->_archiveName][$path][5]);
         }
     }
 
@@ -238,8 +236,6 @@ class PHP_Archive
             return array('Error: cannot open phar "' . $this->_archiveName . '"');
         }
         if (($e = $this->selectFile($path, false)) === true) {
-            $temp = array('crc32' => self::$_manifest[$this->_archiveName][$path][5],
-                          'isize' => self::$_manifest[$this->_archiveName][$path][0]);
             $data = '';
             $count = $this->internalFileLength;
             while ($count) {
@@ -256,11 +252,11 @@ class PHP_Archive
                 $data = gzinflate($data);
             }
             if (!isset(self::$_manifest[$this->_archiveName][$path]['ok'])) {
-                if ($temp['isize'] != $this->currentStat[7]) {
+                if (strlen($data) != $this->currentStat[7]) {
                     return array("Not valid internal .phar file (size error {$size} != " .
                         $this->currentStat[7] . ")");
                 }
-                if ($temp['crc32'] != crc32($data)) {
+                if (self::$_manifest[$this->_archiveName][$path][3] != crc32($data)) {
                     return array("Not valid internal .phar file (checksum error)");
                 }
                 self::$_manifest[$this->_archiveName][$path]['ok'] = true;
@@ -313,12 +309,12 @@ class PHP_Archive
     }
 
     /**
-     * Enter description here...
+     * extract the manifest into an internal array
      *
-     * @param unknown_type $manifest
-     * @return unknown
+     * @param string $manifest
+     * @return false|array
      */
-    private function _unserializeManifest($manifest)
+    private static function _unserializeManifest($manifest)
     {
         // retrieve the number of files in the manifest
         $info = unpack('V', substr($manifest, 0, 4));
@@ -339,36 +335,29 @@ class PHP_Archive
                 return false;
             }
         }
-        $ret = array('compressed' => false);
-        // PHP_Archive-based phars must define an alias
-        $aliaslen = unpack('V', substr($manifest, 6, 10));
-        $aliaslen = $aliaslen[1];
-        if (!$aliaslen) {
-            die('Error: alias must be defined for a PHP_Archive-based phar');
-        }
-        $ret['alias'] = substr($manifest, 10, $aliaslen);
-        $manifest = substr($manifest, 10 + $aliaslen);
+        $ret = array('compressed' => $apiver[3]);
+        $aliaslen = unpack('V', substr($manifest, 6, 4));
+        $ret['alias'] = substr($manifest, 10, $aliaslen[1]);
+        $manifest = substr($manifest, 10 + $aliaslen[1]);
         $offset = 0;
+        $start = 0;
         for ($i = 0; $i < $info[1]; $i++) {
             // length of the file name
-            $len = unpack('V', substr($manifest, 0, 4));
+            $len = unpack('V', substr($manifest, $start, 4));
+            $start += 4;
             // file name
-            $savepath = substr($manifest, 4, $len[1]);
-            $manifest = substr($manifest, $len[1] + 4);
+            $savepath = substr($manifest, $start, $len[1]);
+            $start += $len[1];
             // retrieve manifest data:
             // 0 = uncompressed file size
             // 1 = timestamp of when file was added to phar
             // 2 = compressed filesize
             // 3 = crc32
             // 4 = flags
-            $ret['manifest'][$savepath] = array_values(unpack('Va/Vb/Vc/Vd/Cf', substr($manifest, 0, 17)));
-            $ret['manifest'][$savepath][5] = $ret['manifest'][$savepath][3];
-            $ret['manifest'][$savepath][3] = $offset;
-            if ($ret['manifest'][$savepath][4] & PHP_ARCHIVE_COMPRESSED) {
-                $ret['compressed'] = true;
-            }
+            $ret['manifest'][$savepath] = array_values(unpack('Va/Vb/Vc/Vd/Ce', substr($manifest, $start, 17)));
+            $ret['manifest'][$savepath][5] = $offset;
             $offset += $ret['manifest'][$savepath][2];
-            $manifest = substr($manifest, 17);
+            $start += 17;
         }
         return $ret;
     }

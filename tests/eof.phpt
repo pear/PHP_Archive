@@ -29,5 +29,5 @@ phar://longphar.phar/testtesttesttesttesttesttesttesttesttesttesttesttesttesttes
 bool(false)
 int(0)
 bool(true)
-int(43)
+int(47)
 tests done

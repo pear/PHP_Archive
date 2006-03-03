@@ -116,15 +116,16 @@ if (function_exists('mb_internal_encoding')) {
 ";
         if (!$relyOnPhar) {
             // for smooth use of phar extension
-            $unpack_code .= "if (!class_exists('PHP_Archive')) {
-    if (!class_exists('Phar')) {
-";
+            $unpack_code .= "if (!class_exists('PHP_Archive')) {";
             $unpack_code .= $contents;
-            $unpack_code .= "
-        PHP_Archive::mapPhar(__FILE__, __COMPILER_HALT_OFFSET__);
-    } else {
-        Phar::mapPhar();
+            $unpack_code .= "}
+if (!class_exists('Phar')) {
+    if (!in_array('phar', stream_get_wrappers())) {
+        stream_wrapper_register('phar', 'PHP_Archive');
     }
+    PHP_Archive::mapPhar(__FILE__, __COMPILER_HALT_OFFSET__);
+} else {
+    Phar::mapPhar();
 }
 if (class_exists('PHP_Archive') && !in_array('phar', stream_get_wrappers())) {
     stream_wrapper_register('phar', 'PHP_Archive');
@@ -147,9 +148,7 @@ PHP;
 require_once \'phar://@ALIAS@/' . addslashes($init_file) . '\';
 ';
         }
-        $unpack_code .= <<<PHP
-__HALT_COMPILER();
-PHP;
+        $unpack_code .= '__HALT_COMPILER();';
         file_put_contents($this->temp_path . DIRECTORY_SEPARATOR . 'loader.php', $unpack_code);
     }
 
@@ -456,6 +455,7 @@ PHP;
             $loader = file_get_contents($this->temp_path . DIRECTORY_SEPARATOR . 'loader.php');
             $loader = str_replace('@ALIAS@', addslashes(basename($file_path)), $loader);
             fwrite($newfile, $loader);
+            $this->alias = addslashes(basename($file_path));
         }
         // relative offset from end of manifest
         $offset = 0;
@@ -501,8 +501,8 @@ PHP;
     {
         $apiver = explode('.', '@API-VER@');
         // store API version and compression in 2 bytes
-        $apiver = chr(((int) $apiver[0] << 4) + $apiver[1]) .
-            chr(($apiver[2] << 4) + ($this->compress ? 0x1 : 0));
+        $apiver = chr(((int) ((int) $apiver[0]) << 4) + ((int) $apiver[1])) .
+            chr((int)($apiver[2] << 4) + ($this->compress ? 0x1 : 0));
         $ret = $apiver;
         $ret .= pack('V', strlen($this->alias)) . $this->alias;
         foreach ($manifest as $savepath => $info) {

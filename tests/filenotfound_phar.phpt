@@ -1,5 +1,5 @@
 --TEST--
-Test running a .phar that caches stat [phar extension]
+Test running a .phar with missing file [phar extension]
 --SKIPIF--
 <?php
 if (!extension_loaded('phar')) { echo 'skip'; }

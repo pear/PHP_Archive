@@ -1,12 +1,11 @@
 --TEST--
-Test running a .phar that caches stat
+Test running a .phar with missing file
 --SKIPIF--
 <?php
 if (extension_loaded('phar')) { echo 'skip'; }
 ?>
 --FILE--
 <?php
-require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . 'phpt_test.php.inc';
 if (!class_exists('Phar')) {
     // support phar extension
     require_once 'PHP/Archive.php';

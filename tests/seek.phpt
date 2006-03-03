@@ -15,38 +15,27 @@ require dirname(__FILE__) . DIRECTORY_SEPARATOR . 'longfilename' . DIRECTORY_SEP
     'longphar.phar';
 $phpunit = new PEAR_PHPTest(true);
 $fp = fopen('phar://longphar.phar/testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttest.php', 'r');
-var_dump(ftell($fp));
-var_dump(fread($fp, 2));
+$phpunit->assertEquals(0, ftell($fp), 'first seek 0');
+$phpunit->assertEquals('<?', fread($fp, 2), 'first read');
 fseek($fp, 3);
-var_dump(ftell($fp));
-var_dump(fread($fp, 2));
-var_dump(ftell($fp));
+$phpunit->assertEquals(3, ftell($fp), 'second seek 3');
+$phpunit->assertEquals('hp', fread($fp, 2), 'second read');
+$phpunit->assertEquals(5, ftell($fp), 'after second read');
 fseek($fp, 0, SEEK_END);
-var_dump(ftell($fp));
+$phpunit->assertEquals(47, ftell($fp), 'third seek 0 SEEK_END');
 fseek($fp, -1, SEEK_END);
-var_dump(ftell($fp));
+$phpunit->assertEquals(46, ftell($fp), 'fourth seek -1 SEEK_END');
 fseek($fp, -61, SEEK_END);
-var_dump(ftell($fp));
+$phpunit->assertEquals(46, ftell($fp), 'fifth seek -61 SEEK_END');
 fseek($fp, -1, SEEK_CUR);
-var_dump(ftell($fp));
+$phpunit->assertEquals(45, ftell($fp), 'sixth seek -1 SEEK_CUR');
 fseek($fp, 20, SEEK_CUR);
-var_dump(ftell($fp));
+$phpunit->assertEquals(65, ftell($fp), 'seventh seek 20 SEEK_CUR');
 fseek($fp, 1, SEEK_END);
-var_dump(ftell($fp));
+$phpunit->assertEquals(48, ftell($fp), 'eighth seek 1 SEEK_END');
 fclose($fp);
 echo 'tests done';
 ?>
 --EXPECT--
 phar://longphar.phar/testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttest.phpstring(5) "hello"
-int(0)
-string(2) "<?"
-int(3)
-string(2) "hp"
-int(5)
-int(43)
-int(42)
-int(42)
-int(41)
-int(61)
-int(44)
 tests done
