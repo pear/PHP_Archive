@@ -124,6 +124,7 @@ class PHP_Archive
      */
     public static final function mapPhar($file, $dataoffset)
     {
+        $file = realpath($file);
         // this ensures that this is safe
         if (!in_array($file, get_included_files())) {
             die('SECURITY ERROR: PHP_Archive::mapPhar can only be called from within ' .
