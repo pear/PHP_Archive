@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<package packagerversion="1.4.6" version="2.0" xmlns="http://pear.php.net/dtd/package-2.0" xmlns:tasks="http://pear.php.net/dtd/tasks-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0 http://pear.php.net/dtd/tasks-1.0.xsd http://pear.php.net/dtd/package-2.0 http://pear.php.net/dtd/package-2.0.xsd">
+<package packagerversion="1.4.9" version="2.0" xmlns="http://pear.php.net/dtd/package-2.0" xmlns:tasks="http://pear.php.net/dtd/tasks-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0 http://pear.php.net/dtd/tasks-1.0.xsd http://pear.php.net/dtd/package-2.0 http://pear.php.net/dtd/package-2.0.xsd">
  <name>PHP_Archive</name>
  <channel>pear.php.net</channel>
  <summary>Create and Use PHP Archive files</summary>
@@ -16,8 +16,8 @@
   <email>cellog@php.net</email>
   <active>yes</active>
  </lead>
- <date>2006-01-08</date>
- <time>17:16:03</time>
+ <date>2006-03-20</date>
+ <time>16:47:35</time>
  <version>
   <release>0.8.0</release>
   <api>0.8.0</api>
@@ -38,7 +38,10 @@ Small BC breaks:
 
 Feature additions:
 * creating .phars that are reliant on the .phar extension is now possible
-* new PHP_Archive_Manager is available for debugging phars</notes>
+* new PHP_Archive_Manager is available for debugging phars
+
+Bug fixes:
+* fix bug #7110: mapPhar security error</notes>
  <contents>
   <dir baseinstalldir="PHP" name="/">
    <dir name="Archive">
@@ -128,8 +131,8 @@ Feature additions:
     <release>alpha</release>
     <api>alpha</api>
    </stability>
-   <date>2006-01-08</date>
-   <license>PHP License</license>
+   <date>2006-03-20</date>
+   <license uri="http://www.php.net/license">PHP License</license>
    <notes>This release is fully compatible with the phar extension
 
 Major BC breaks:
@@ -141,7 +144,10 @@ Small BC breaks:
 
 Feature additions:
 * creating .phars that are reliant on the .phar extension is now possible
-* new PHP_Archive_Manager is available for debugging phars</notes>
+* new PHP_Archive_Manager is available for debugging phars
+
+Bug fixes:
+* fix bug #7110: mapPhar security error</notes>
   </release>
   <release>
    <version>

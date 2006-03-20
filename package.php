@@ -17,6 +17,9 @@ Small BC breaks:
 Feature additions:
 * creating .phars that are reliant on the .phar extension is now possible
 * new PHP_Archive_Manager is available for debugging phars
+
+Bug fixes:
+* fix bug #7110: mapPhar security error
 EOT;
 
 
