@@ -27,7 +27,7 @@ require_once 'System.php';
  * @package PHP_Archive
  * @category PHP
  */
-class PHP_Archive_Creator
+class PHP_Archive_Creator implements ArrayAccess
 {
     /**
      * @var string The Archive Filename
@@ -66,6 +66,36 @@ class PHP_Archive_Creator
      */
     protected $manifest = array();
 
+    /**#@+
+     * ArrayAccess methods
+     */
+    public function offsetExists($offset)
+    {
+        return is_string($offset) && isset($this->manifest[$offset]);
+    }
+
+    public function offsetGet($offset)
+    {
+        if (is_string($offset) && isset($this->manifest[$offset])) {
+            return file_get_contents($this->manifest[$offset]['tempfile']);
+        }
+    }
+
+    public function offsetSet($offset, $value)
+    {
+        if (is_string($offset)) {
+            $this->addString($value, $offset, false);
+        }
+    }
+
+    public function offsetUnset($offset)
+    {
+        if (is_string($offset) && isset($this->manifest[$offset])) {
+            unset($this->manifest[$offset]);
+        }
+    }
+
+    /**#@-*/
     /**
      * @param string
      */

@@ -138,7 +138,21 @@ class PHP_Archive
             // seek to __HALT_COMPILER_OFFSET__
             fseek($fp, $dataoffset);
             $manifest_length = unpack('Vlen', fread($fp, 4));
-            $info = self::_unserializeManifest(fread($fp, $manifest_length['len']));
+            $manifest = '';
+            $last = '1';
+            while (strlen($last) && strlen($manifest) < $manifest_length['len']) {
+                $read = 8192;
+                if ($manifest_length['len'] - strlen($manifest) < 8192) {
+                    $read = $manifest_length['len'] - strlen($manifest);
+                }
+                $last = fread($fp, $read);
+                $manifest .= $last;
+            }
+            if (strlen($manifest) < $manifest_length['len']) {
+                die('ERROR: manifest length read was "' . strlen($manifest) .'" should be "' .
+                    $manifest_length['len'] . '"');
+            }
+            $info = self::_unserializeManifest($manifest);
             if (!$info) {
                 die; // error declared in unserializeManifest
             }

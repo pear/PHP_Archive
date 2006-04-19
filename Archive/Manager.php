@@ -301,14 +301,17 @@ class PHP_Archive_Manager
         // 2 = compressed file size
         // 3 = crc32
         // 4 = flags
+        $offset = 0;
         foreach ($this->_manifest as $file => $info) {
             $ret['File phar://' . $this->_alias . '/' . $file . ' size'] = $info[0];
             $ret['File phar://' . $this->_alias . '/' . $file . ' save date'] =
                 date('Y-m-d H:i', $info[1]);
             $ret['File phar://' . $this->_alias . '/' . $file . ' crc'] = $info[3];
             $ret['File phar://' . $this->_alias . '/' . $file . ' size in archive'] = $info[2];
+            $ret['File phar://' . $this->_alias . '/' . $file . ' offset in archive'] = $offset;
             $ret['File phar://' . $this->_alias . '/' . $file . ' GZ compressed'] =
                 $info[4] & PHP_ARCHIVE_MANAGER_COMPRESSED_GZ ? 'yes' : 'no';
+            $offset += $info[2];
         }
         return $ret;
     }
