@@ -231,7 +231,7 @@ require_once \'phar://@ALIAS@/' . addslashes($init_file) . '\';
         $save_path = self::processFile($save_path);
         if (count($this->_magicRequireCallbacks)) {
             foreach ($this->_magicRequireCallbacks as $callback) {
-                $file_contents = call_user_func($callback, $file_contents);
+                $file_contents = call_user_func($callback, $file_contents, $save_path);
             }
         }
         if ($magicrequire) {
