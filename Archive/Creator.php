@@ -66,6 +66,14 @@ class PHP_Archive_Creator implements ArrayAccess
      */
     protected $manifest = array();
 
+    /**
+     * A list of custom callbacks that should be used for manipulating file contents
+     * prior to adding to the phar.
+     *
+     * @var array
+     */
+    private $_magicRequireCallbacks = array();
+
     /**#@+
      * ArrayAccess methods
      */
@@ -183,6 +191,21 @@ require_once \'phar://@ALIAS@/' . addslashes($init_file) . '\';
     }
 
     /**
+     * Specify a custom "magic require" callback for processing file contents.
+     * 
+     * This will be called regardless of the magicrequire parameter's
+     * value for {@link addString()} or {@link addFile()}
+     *
+     * @param callback $callback
+     */
+    public function addMagicRequireCallback($callback)
+    {
+        if (is_callable($callback)) {
+            $this->_magicRequireCallbacks[] = $callback;
+        }
+    }
+
+    /**
      * Add a file to the PHP Archive
      *
      * @param string $file Path of the File to add
@@ -206,6 +229,11 @@ require_once \'phar://@ALIAS@/' . addslashes($init_file) . '\';
     public function addString($file_contents, $save_path, $magicrequire = false)
     {
         $save_path = self::processFile($save_path);
+        if (count($this->_magicRequireCallbacks)) {
+            foreach ($this->_magicRequireCallbacks as $callback) {
+                $file_contents = call_user_func($callback, $file_contents);
+            }
+        }
         if ($magicrequire) {
             $file_contents = str_replace("require_once '", "require_once 'phar://$magicrequire/",
                 $file_contents);
