@@ -571,14 +571,16 @@ class PHP_Archive
         foreach (self::$_manifest[$this->_archiveName] as $file => $info) {
             if ($path == '/') {
                 if (strpos($file, '/')) {
-                    $this->_dirFiles[array_shift($a = explode('/', $file))] = true;
+                    $a = explode('/', $file);
+                    $this->_dirFiles[array_shift($a)] = true;
                 } else {
                     $this->_dirFiles[$file] = true;
                 }
             } elseif (strpos($file, $path) === 0) {
                 $fname = substr($file, strlen($path) + 1);
                 if (strpos($fname, '/')) {
-                    $this->_dirFiles[array_unshift($a = explode('/', $fname))] = true;
+                    $a = explode('/', $fname);
+                    $this->_dirFiles[array_shift($a)] = true;
                 } else {
                     $this->_dirFiles[$fname] = true;
                 }
