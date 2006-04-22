@@ -131,13 +131,13 @@ class PHP_Archive_Creator implements ArrayAccess
      * @param string|false $init_file Init file (file called by default upon PHAR execution).
      *                                if false, none will be called, and execution will return.
      *                                use this option for libraries
-     * @param boolean $compress Whether to compress the files or not (will cause slowdown!)
      * @param string $alias alias name like "go-pear.phar" to be used for opening
      *                      files from this phar
+     * @param boolean $compress Whether to compress the files or not (will cause slowdown!)
      * @param bool $relyOnPhar if true, then a slim, phar extension-dependent .phar will be
      *                         created
      */
-    public function __construct($init_file = 'index.php', $compress = false, $alias = null,
+    public function __construct($init_file = 'index.php', $alias, $compress = false,
                                 $relyOnPhar = false)
     {
         $this->compress = $compress;
@@ -235,10 +235,8 @@ require_once \'phar://@ALIAS@/' . addslashes($init_file) . '\';
             }
         }
         if ($magicrequire) {
-            $file_contents = str_replace("require_once '", "require_once 'phar://$magicrequire/",
-                $file_contents);
-            $file_contents = str_replace("include_once '", "include_once 'phar://$magicrequire/",
-                $file_contents);
+            die('ERROR: magicrequire is removed, set a magicrequire callback to ' .
+                'array("PHP_Archive_Creator", "simpleMagicRequire) to implement');
         }
         if (!file_exists($this->temp_path . DIRECTORY_SEPARATOR . 'contents')) {
             mkdir($this->temp_path . DIRECTORY_SEPARATOR . 'contents');
@@ -265,6 +263,49 @@ require_once \'phar://@ALIAS@/' . addslashes($init_file) . '\';
                 'actualsize' => strlen($file_contents),
                 'crc32' => $crc32,
                 'flags' => $this->compress ? 1 : 0); // gz compression = 0x1
+    }
+
+    /**
+     * prepends all include/require calls with "phar://alias"
+     *
+     * @param string $contents file contents
+     * @param string $path internal path of the file
+     */
+    public function simpleMagicRequire($contents, $path)
+    {
+        $file_contents = str_replace("require_once '", "require_once 'phar://" . $this->alias . "/",
+            $file_contents);
+        $file_contents = str_replace("include_once '", "include_once 'phar://" . $this->alias . "/",
+            $file_contents);
+        return $file_contents;
+    }
+
+    /**
+     * prepends "phar://alias" only to include/require that use quotes
+     *
+     * @param string $contents file contents
+     * @param string $path internal path of the file
+     */
+    public function limitedSmartMagicRequire($contents, $path)
+    {
+        $file_contents = preg_replace(
+            '/(include|require)(_once)?\s*((?:\'|")[^;]+);/',
+            '$1$2 \'phar://' . $this->alias . '/\' . $3', $contents);
+        return $file_contents;
+    }
+
+    /**
+     * The basic magicrequire callback (implements old-fashioned magicrequire)
+     *
+     * @param string $contents file contents
+     * @param string $path internal path of the file
+     */
+    public function smartMagicRequire($contents, $path)
+    {
+        $file_contents = preg_replace(
+            '/(include|require)(_once)?([^;]+);/',
+            '$1$2 \'phar://' . $this->alias . '/\' . $3', $contents);
+        return $file_contents;
     }
 
     /**
