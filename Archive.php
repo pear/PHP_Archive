@@ -581,8 +581,9 @@ class PHP_Archive
                 if (strpos($fname, '/')) {
                     $a = explode('/', $fname);
                     $this->_dirFiles[array_shift($a)] = true;
-                } elseif (strlen($file) == strlen($path)) {
-                    // must be exact match, otherwise it's a file
+                } elseif (strlen($file) != strlen($path)) {
+                    // if the two match exactly, the path searched for was
+                    // not a directory, but was a file.
                     $this->_dirFiles[$fname] = true;
                 }
             }
