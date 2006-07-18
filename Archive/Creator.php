@@ -274,7 +274,7 @@ require_once \'phar://@ALIAS@/' . addslashes($init_file) . '\';
     public function simpleMagicRequire($contents, $path)
     {
         $file_contents = str_replace("require_once '", "require_once 'phar://" . $this->alias . "/",
-            $file_contents);
+            $contents);
         $file_contents = str_replace("include_once '", "include_once 'phar://" . $this->alias . "/",
             $file_contents);
         return $file_contents;
