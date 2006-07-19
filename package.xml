@@ -16,8 +16,8 @@
   <email>cellog@php.net</email>
   <active>yes</active>
  </lead>
- <date>2006-07-17</date>
- <time>20:33:16</time>
+ <date>2006-07-18</date>
+ <time>20:21:11</time>
  <version>
   <release>0.8.0</release>
   <api>0.8.0</api>
@@ -131,7 +131,7 @@ Bug fixes:
     <release>alpha</release>
     <api>alpha</api>
    </stability>
-   <date>2006-07-17</date>
+   <date>2006-07-18</date>
    <license uri="http://www.php.net/license">PHP License</license>
    <notes>This release is fully compatible with the phar extension
 
