@@ -55,6 +55,11 @@ class PHP_Archive_Creator implements ArrayAccess
     protected $compress = false;
 
     /**
+     * @var boolean Whether or not to collapse (remove whitespace/comments)
+     */
+    protected $collapse = false;
+
+    /**
      * @var boolean Whether or not a file has been added to the archive
      */
     protected $modified = false;
@@ -136,14 +141,20 @@ class PHP_Archive_Creator implements ArrayAccess
      * @param boolean $compress Whether to compress the files or not (will cause slowdown!)
      * @param bool $relyOnPhar if true, then a slim, phar extension-dependent .phar will be
      *                         created
+     * @param bool $collapse Remove whitespace and comments from PHP_Archive class
      */
     public function __construct($init_file = 'index.php', $alias, $compress = false,
-                                $relyOnPhar = false)
+                                $relyOnPhar = false, $collapse = false)
     {
         $this->compress = $compress;
+        $this->collapse = $collapse;
         $this->temp_path = System::mktemp(array('-d', 'phr'));
-        $contents = trim(str_replace(array('<?php', '?>'), array('', ''),
-            file_get_contents(dirname(dirname(__FILE__)) . DIRECTORY_SEPARATOR . 'Archive.php')));
+        $contents = file_get_contents(dirname(dirname(__FILE__)) .
+            DIRECTORY_SEPARATOR . 'Archive.php');
+        if ($this->collapse) {
+            $contents = self::collapse($contents);
+        }
+        $contents = trim(str_replace(array('<?php', '?>'), array('', ''), $contents));
         // make sure .phars added to CVS don't get checksum errors because of CVS tags
         $contents = str_replace('* @version $Id', '* @version Id', $contents);
         $unpack_code = "<?php #PHP_ARCHIVE_HEADER-@API-VER@
@@ -511,6 +522,37 @@ require_once \'phar://@ALIAS@/' . addslashes($init_file) . '\';
         $this->_setupIgnore($include, 0);
         $list = $this->dirList($dir);
         return $this->addArray($list, $magicrequire);
+    }
+
+    /**
+     * Collapse a block of code (remove whitespace and comments)
+     *
+     * @param string $contents PHP code to collapse
+     * @return string
+     * @author Sean Coates <sean@php.net>
+     */
+    private static function collapse($contents)
+    {
+        $ret = '';
+        $tokens = token_get_all($contents);
+        foreach ($tokens as $t) {
+            if (is_string($t)) {
+                $ret .= $t;
+            } else {
+                list($token, $data) = $t;
+                if ($token == T_WHITESPACE) {
+                    if (strpos($data, "\n") !== false) {
+                        $data = "\n";
+                    } else {
+                        $data = ' ';
+                    }
+                } elseif ($token == T_COMMENT || $token == T_DOC_COMMENT) {
+                    $data = '';
+                }
+                $ret .= $data;
+            }
+        }
+        return $ret;
     }
 
     /**

@@ -2,24 +2,13 @@
 require_once 'PEAR/PackageFileManager.php';
 require_once 'PEAR/PackageFileManager2.php';
 PEAR::setErrorHAndling(PEAR_ERROR_DIE);
-$version = '0.8.0';
-$apiversion = '0.8.0';
+$version = '0.9.0';
+$apiversion = '0.9.0';
 $notes = <<<EOT
 This release is fully compatible with the phar extension
 
-Major BC breaks:
-* the entire structure of an internal phar's manifest has changed
-* mapPhar now only takes 2 parameters
-
-Small BC breaks:
-* PHP_Archive::processFile() was public static and is now private static
-
-Feature additions:
-* creating .phars that are reliant on the .phar extension is now possible
-* new PHP_Archive_Manager is available for debugging phars
-
-Bug fixes:
-* fix bug #7110: mapPhar security error
+Minor feature addition:
+* implement Request #7362: Add archive collapsing to greatly reduce phar base size
 EOT;
 
 
