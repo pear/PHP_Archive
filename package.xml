@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<package packagerversion="1.5.0RC1" version="2.0" xmlns="http://pear.php.net/dtd/package-2.0" xmlns:tasks="http://pear.php.net/dtd/tasks-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0 http://pear.php.net/dtd/tasks-1.0.xsd http://pear.php.net/dtd/package-2.0 http://pear.php.net/dtd/package-2.0.xsd">
+<package packagerversion="1.5.0RC2" version="2.0" xmlns="http://pear.php.net/dtd/package-2.0" xmlns:tasks="http://pear.php.net/dtd/tasks-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0 http://pear.php.net/dtd/tasks-1.0.xsd http://pear.php.net/dtd/package-2.0 http://pear.php.net/dtd/package-2.0.xsd">
  <name>PHP_Archive</name>
  <channel>pear.php.net</channel>
  <summary>Create and Use PHP Archive files</summary>
@@ -16,21 +16,33 @@
   <email>cellog@php.net</email>
   <active>yes</active>
  </lead>
- <date>2006-12-15</date>
- <time>22:22:03</time>
+ <date>2007-01-05</date>
+ <time>21:55:45</time>
  <version>
-  <release>0.9.0</release>
-  <api>0.9.0</api>
+  <release>0.9.1</release>
+  <api>0.8.0</api>
  </version>
  <stability>
   <release>alpha</release>
   <api>alpha</api>
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
- <notes>This release is fully compatible with the phar extension
+ <notes>
+fix API version so that Phar extension can also open PHP_Archive-generated archives
 
-Minor feature addition:
-* implement Request #7362: Add archive collapsing to greatly reduce phar base size</notes>
+major 32-bit/64-bit issue in PHP 5.1 where unpack() returns different values
+was causing some phars to fail.  For instance:
+
+$a = pack(&quot;V&quot;, 3068571189);
+var_dump(unpack(&quot;Va&quot;, $a));
+
+reports
+int(3068571189) on 32 bit and
+int(-1226396107) on 64 bit
+
+in PHP 5.1.  This is fixed in PHP 5.2.  This only affects CRCs.  The workaround
+found is to sprintf(&quot;%u&quot;, $crc)
+ </notes>
  <contents>
   <dir baseinstalldir="PHP" name="/">
    <dir name="Archive">
@@ -111,6 +123,34 @@ Minor feature addition:
  </dependencies>
  <phprelease />
  <changelog>
+  <release>
+   <version>
+    <release>0.9.1</release>
+    <api>0.8.0</api>
+   </version>
+   <stability>
+    <release>alpha</release>
+    <api>alpha</api>
+   </stability>
+   <date>2007-01-05</date>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+fix API version so that Phar extension can also open PHP_Archive-generated archives
+
+major 32-bit/64-bit issue in PHP 5.1 where unpack() returns different values
+was causing some phars to fail.  For instance:
+
+$a = pack(&quot;V&quot;, 3068571189);
+var_dump(unpack(&quot;Va&quot;, $a));
+
+reports
+int(3068571189) on 32 bit and
+int(-1226396107) on 64 bit
+
+in PHP 5.1.  This is fixed in PHP 5.2.  This only affects CRCs.  The workaround
+found is to sprintf(&quot;%u&quot;, $crc)
+   </notes>
+  </release>
   <release>
    <version>
     <release>0.9.0</release>

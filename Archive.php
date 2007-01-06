@@ -370,6 +370,7 @@ class PHP_Archive
             // 3 = crc32
             // 4 = flags
             $ret['manifest'][$savepath] = array_values(unpack('Va/Vb/Vc/Vd/Ce', substr($manifest, $start, 17)));
+            $ret['manifest'][$savepath][3] = sprintf('%u', $ret['manifest'][$savepath][3]);
             $ret['manifest'][$savepath][5] = $offset;
             $offset += $ret['manifest'][$savepath][2];
             $start += 17;

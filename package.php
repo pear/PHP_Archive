@@ -2,14 +2,24 @@
 require_once 'PEAR/PackageFileManager.php';
 require_once 'PEAR/PackageFileManager2.php';
 PEAR::setErrorHAndling(PEAR_ERROR_DIE);
-$version = '0.9.0';
-$apiversion = '0.9.0';
-$notes = <<<EOT
-This release is fully compatible with the phar extension
+$version = '0.9.1';
+$apiversion = '0.8.0';
+$notes = '
+fix API version so that Phar extension can also open PHP_Archive-generated archives
 
-Minor feature addition:
-* implement Request #7362: Add archive collapsing to greatly reduce phar base size
-EOT;
+major 32-bit/64-bit issue in PHP 5.1 where unpack() returns different values
+was causing some phars to fail.  For instance:
+
+$a = pack("V", 3068571189);
+var_dump(unpack("Va", $a));
+
+reports
+int(3068571189) on 32 bit and
+int(-1226396107) on 64 bit
+
+in PHP 5.1.  This is fixed in PHP 5.2.  This only affects CRCs.  The workaround
+found is to sprintf("%u", $crc)
+';
 
 
 $package = PEAR_PackageFileManager2::importOptions(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'package.xml',
