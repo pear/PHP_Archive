@@ -2,23 +2,14 @@
 require_once 'PEAR/PackageFileManager.php';
 require_once 'PEAR/PackageFileManager2.php';
 PEAR::setErrorHAndling(PEAR_ERROR_DIE);
-$version = '0.9.1';
+$version = '0.9.2';
 $apiversion = '0.8.0';
 $notes = '
-fix API version so that Phar extension can also open PHP_Archive-generated archives
+another major 32-bit/64-bit issue in PHP 5.1 where crc32() returns different values
+was causing some phars to fail.
 
-major 32-bit/64-bit issue in PHP 5.1 where unpack() returns different values
-was causing some phars to fail.  For instance:
-
-$a = pack("V", 3068571189);
-var_dump(unpack("Va", $a));
-
-reports
-int(3068571189) on 32 bit and
-int(-1226396107) on 64 bit
-
-in PHP 5.1.  This is fixed in PHP 5.2.  This only affects CRCs.  The workaround
-found is to sprintf("%u", $crc)
+This is *not* fixed in PHP 5.2, and won\'t be.  This only affects CRCs.  The workaround
+found is to sprintf("%u", crc32($data))
 ';
 
 

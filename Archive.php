@@ -271,7 +271,7 @@ class PHP_Archive
                     return array("Not valid internal .phar file (size error {$size} != " .
                         $this->currentStat[7] . ")");
                 }
-                if (self::$_manifest[$this->_archiveName][$path][3] != crc32($data)) {
+                if (self::$_manifest[$this->_archiveName][$path][3] != sprintf("%u", crc32($data))) {
                     return array("Not valid internal .phar file (checksum error)");
                 }
                 self::$_manifest[$this->_archiveName][$path]['ok'] = true;

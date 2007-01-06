@@ -16,10 +16,10 @@
   <email>cellog@php.net</email>
   <active>yes</active>
  </lead>
- <date>2007-01-05</date>
- <time>21:55:45</time>
+ <date>2007-01-06</date>
+ <time>15:58:01</time>
  <version>
-  <release>0.9.1</release>
+  <release>0.9.2</release>
   <api>0.8.0</api>
  </version>
  <stability>
@@ -28,20 +28,11 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-fix API version so that Phar extension can also open PHP_Archive-generated archives
+another major 32-bit/64-bit issue in PHP 5.1 where crc32() returns different values
+was causing some phars to fail.
 
-major 32-bit/64-bit issue in PHP 5.1 where unpack() returns different values
-was causing some phars to fail.  For instance:
-
-$a = pack(&quot;V&quot;, 3068571189);
-var_dump(unpack(&quot;Va&quot;, $a));
-
-reports
-int(3068571189) on 32 bit and
-int(-1226396107) on 64 bit
-
-in PHP 5.1.  This is fixed in PHP 5.2.  This only affects CRCs.  The workaround
-found is to sprintf(&quot;%u&quot;, $crc)
+This is *not* fixed in PHP 5.2, and won&apos;t be.  This only affects CRCs.  The workaround
+found is to sprintf(&quot;%u&quot;, crc32($data))
  </notes>
  <contents>
   <dir baseinstalldir="PHP" name="/">
@@ -125,6 +116,25 @@ found is to sprintf(&quot;%u&quot;, $crc)
  <changelog>
   <release>
    <version>
+    <release>0.9.2</release>
+    <api>0.8.0</api>
+   </version>
+   <stability>
+    <release>alpha</release>
+    <api>alpha</api>
+   </stability>
+   <date>2007-01-06</date>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+another major 32-bit/64-bit issue in PHP 5.1 where crc32() returns different values
+was causing some phars to fail.
+
+This is *not* fixed in PHP 5.2, and won&apos;t be.  This only affects CRCs.  The workaround
+found is to sprintf(&quot;%u&quot;, crc32($data))
+   </notes>
+  </release>
+  <release>
+   <version>
     <release>0.9.1</release>
     <api>0.8.0</api>
    </version>
@@ -134,8 +144,7 @@ found is to sprintf(&quot;%u&quot;, $crc)
    </stability>
    <date>2007-01-05</date>
    <license uri="http://www.php.net/license">PHP License</license>
-   <notes>
-fix API version so that Phar extension can also open PHP_Archive-generated archives
+   <notes>fix API version so that Phar extension can also open PHP_Archive-generated archives
 
 major 32-bit/64-bit issue in PHP 5.1 where unpack() returns different values
 was causing some phars to fail.  For instance:
@@ -148,8 +157,7 @@ int(3068571189) on 32 bit and
 int(-1226396107) on 64 bit
 
 in PHP 5.1.  This is fixed in PHP 5.2.  This only affects CRCs.  The workaround
-found is to sprintf(&quot;%u&quot;, $crc)
-   </notes>
+found is to sprintf(&quot;%u&quot;, $crc)</notes>
   </release>
   <release>
    <version>
