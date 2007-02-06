@@ -230,7 +230,8 @@ class PHP_Archive
             throw new Exception('ERROR: PHP_Archive::mapPhar has already been called for alias "' .
                 $alias . '" cannot re-alias to "' . $file . '"');
         }
-        self::$_pharMapping[$alias] = array($file, $compressed, $dataoffset, $explicit);
+        self::$_pharMapping[$alias] = array($file, $compressed, $dataoffset, $explicit,
+            $info['metadata']);
         self::$_pharFiles[$file] = $alias;
     }
 
@@ -775,6 +776,52 @@ class PHP_Archive
     public final function APIVersion()
     {
         return '@API-VER@';
+    }
+
+    /**
+     * Retrieve Phar-specific metadata for a Phar archive
+     *
+     * @param string $phar full path to Phar archive, or alias
+     * @return null|mixed The value that was serialized for the Phar
+     *                    archive's metadata
+     * @throws Exception
+     */
+    public static function getPharMetadata($phar)
+    {
+        if (isset(self::$_pharFiles[$phar])) {
+            $phar = self::$_pharFiles[$phar];
+        }
+        if (!isset(self::$_pharMapping[$phar])) {
+            throw new Exception('Unknown Phar archive: "' . $phar . '"');
+        }
+        return self::$_pharMapping[$phar][4];
+    }
+
+    /**
+     * Retrieve File-specific metadata for a Phar archive file
+     *
+     * @param string $phar full path to Phar archive, or alias
+     * @param string $file relative path to file within Phar archive
+     * @return null|mixed The value that was serialized for the Phar
+     *                    archive's metadata
+     * @throws Exception
+     */
+    public static function getFileMetadata($phar, $file)
+    {
+        if (!isset(self::$_pharFiles[$phar])) {
+            if (!isset(self::$_pharMapping[$phar])) {
+                throw new Exception('Unknown Phar archive: "' . $phar . '"');
+            }
+            $phar = self::$_pharMapping[$phar][0];
+        }
+        if (!isset(self::$_manifest[$phar])) {
+            throw new Exception('Unknown Phar: "' . $phar . '"');
+        }
+        $file = self::processFile($file);
+        if (!isset(self::$_manifest[$phar][$file])) {
+            throw new Exception('Unknown file "' . $file . '" within Phar "'. $phar . '"');
+        }
+        return self::$_manifest[$phar][$file][6];
     }
 }
 ?>

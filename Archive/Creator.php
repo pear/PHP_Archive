@@ -305,6 +305,7 @@ require_once \'phar://@ALIAS@/' . addslashes($init_file) . '\';
         if ($this->compress) {
             $flags |= ($this->compress == 'gz') ? 0x00001000 : 0x00002000;
         }
+        $flags |= 0555; // file permissions
         $this->manifest[$save_path] =
             array(
                 'tempfile' => $this->temp_path . DIRECTORY_SEPARATOR . 'contents' .

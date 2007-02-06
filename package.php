@@ -7,7 +7,16 @@ $apiversion = '1.0.0';
 $notes = '
 Update to match phar extension
 
-Final API for 1.0.0 is set';
+Final API for 1.0.0 is set
+
+Add support for:
+
+ * Phar metadata - any serialized value
+ * file-specific metadata - any serialized value
+ * bzip2 compression of files
+ * SHA1/MD5 signature creation (Phar extension can use this,
+   PHP_Archive does not on open for performance reasons)
+ * file permissions (always set to 0555)';
 
 
 $package = PEAR_PackageFileManager2::importOptions(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'package.xml',
