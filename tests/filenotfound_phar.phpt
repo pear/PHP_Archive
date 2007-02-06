@@ -19,5 +19,5 @@ require dirname(__FILE__) . DIRECTORY_SEPARATOR . 'filenotfound' . DIRECTORY_SEP
 echo 'tests done';
 ?>
 --EXPECT--
-fopen(phar://cachestat.phar/test2.php): failed to open stream: phar error: "test2.php" is not a file in phar "cachestat.phar"
+Error: "test2.php" is not a file in phar "filenotfound.phar"
 tests done

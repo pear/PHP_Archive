@@ -1,3 +1,3 @@
 <?php
-@fopen('phar://cachestat.phar/test2.php', 'r');
+fopen('phar://filenotfound.phar/test2.php', 'r');
 ?>

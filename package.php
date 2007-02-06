@@ -2,15 +2,12 @@
 require_once 'PEAR/PackageFileManager.php';
 require_once 'PEAR/PackageFileManager2.php';
 PEAR::setErrorHAndling(PEAR_ERROR_DIE);
-$version = '0.9.2';
-$apiversion = '0.8.0';
+$version = '0.10.0';
+$apiversion = '1.0.0';
 $notes = '
-another major 32-bit/64-bit issue in PHP 5.1 where crc32() returns different values
-was causing some phars to fail.
+Update to match phar extension
 
-This is *not* fixed in PHP 5.2, and won\'t be.  This only affects CRCs.  The workaround
-found is to sprintf("%u", crc32($data))
-';
+Final API for 1.0.0 is set';
 
 
 $package = PEAR_PackageFileManager2::importOptions(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'package.xml',
@@ -28,7 +25,7 @@ $package = PEAR_PackageFileManager2::importOptions(dirname(__FILE__) . DIRECTORY
 $package->setReleaseVersion($version);
 $package->setAPIVersion($apiversion);
 $package->setReleaseStability('alpha');
-$package->setAPIStability('alpha');
+$package->setAPIStability('stable');
 $package->setNotes($notes);
 $package->clearDeps();
 $package->addPackageDepWithChannel('required', 'PEAR', 'pear.php.net', '1.4.3');

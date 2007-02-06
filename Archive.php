@@ -6,10 +6,6 @@
  * @category PHP
  */
 /**
- * Flag for GZ compression
- */
-define('PHP_ARCHIVE_COMPRESSED', 1);
-/**
  * PHP_Archive Class (implements .phar)
  *
  * PHAR files a singular archive from which an entire application can run.
@@ -30,6 +26,8 @@ define('PHP_ARCHIVE_COMPRESSED', 1);
  
 class PHP_Archive
 {
+    const GZ = 0x00001000;
+    const BZ2 = 0x00002000;
     /**
      * Whether this archive is compressed with zlib
      *
@@ -74,12 +72,19 @@ class PHP_Archive
      * </code>
      * then the alias is "PEAR.phar"
      * 
-     * Information stored is the actual file name, a boolean indicating whether
-     * this .phar is compressed with zlib, and the precise offset of internal files
+     * Information stored is a boolean indicating whether this .phar is compressed
+     * with zlib, another for bzip2, phar-specific meta-data, and
+     * the precise offset of internal files
      * within the .phar, used with the {@link $_manifest} to load actual file contents
      * @var array
      */
     private static $_pharMapping = array();
+    /**
+     * Map real file paths to alias used
+     *
+     * @var array
+     */
+    private static $_pharFiles = array();
     /**
      * File listing for the .phar
      * 
@@ -110,6 +115,30 @@ class PHP_Archive
     private $_basename;
 
     /**
+     * Allows loading an external Phar archive without include()ing it
+     *
+     * @param string $file
+     * @throws Exception
+     */
+    public static final function loadPhar($file)
+    {
+        $file = realpath($file);
+        if ($file) {
+            $fp = fopen($file, 'rb');
+            $buffer = '';
+            while (!$found && !feof($fp)) {
+                $buffer .= fread($fp, 8192);
+                // don't break phars
+                if ($pos = strpos($buffer, '__HALT_COMPI' . 'LER();')) {
+                    fclose($fp);
+                    return self::_mapPhar($file, $pos);
+                }
+            }
+            fclose($fp);
+        }
+    }
+
+    /**
      * Map a full real file path to an alias used to refer to the .phar
      *
      * This function can only be called from the initialization of the .phar itself.
@@ -124,55 +153,157 @@ class PHP_Archive
      */
     public static final function mapPhar($file, $dataoffset)
     {
+        try {
+            // this ensures that this is safe
+            if (!in_array($file, get_included_files())) {
+                die('SECURITY ERROR: PHP_Archive::mapPhar can only be called from within ' .
+                    'the phar that initiates it');
+            }
+            self::_mapPhar($file, $dataoffset);
+        } catch (Exception $e) {
+            die($e->getMessage());
+        }
+    }
+
+    /**
+     * Sub-function, allows recovery from errors
+     *
+     * @param unknown_type $file
+     * @param unknown_type $dataoffset
+     */
+    private static function _mapPhar($file, $dataoffset)
+    {
         $file = realpath($file);
-        // this ensures that this is safe
-        if (!in_array($file, get_included_files())) {
-            die('SECURITY ERROR: PHP_Archive::mapPhar can only be called from within ' .
-                'the phar that initiates it');
+        if (isset(self::$_manifest[$file])) {
+            return;
         }
         if (!is_array(self::$_pharMapping)) {
             self::$_pharMapping = array();
         }
-        if (!isset(self::$_manifest[$file])) {
-            $fp = fopen($file, 'rb');
-            // seek to __HALT_COMPILER_OFFSET__
-            fseek($fp, $dataoffset);
-            $manifest_length = unpack('Vlen', fread($fp, 4));
-            $manifest = '';
-            $last = '1';
-            while (strlen($last) && strlen($manifest) < $manifest_length['len']) {
-                $read = 8192;
-                if ($manifest_length['len'] - strlen($manifest) < 8192) {
-                    $read = $manifest_length['len'] - strlen($manifest);
-                }
-                $last = fread($fp, $read);
-                $manifest .= $last;
+        $fp = fopen($file, 'rb');
+        // seek to __HALT_COMPILER_OFFSET__
+        fseek($fp, $dataoffset);
+        $manifest_length = unpack('Vlen', fread($fp, 4));
+        $manifest = '';
+        $last = '1';
+        while (strlen($last) && strlen($manifest) < $manifest_length['len']) {
+            $read = 8192;
+            if ($manifest_length['len'] - strlen($manifest) < 8192) {
+                $read = $manifest_length['len'] - strlen($manifest);
             }
-            if (strlen($manifest) < $manifest_length['len']) {
-                die('ERROR: manifest length read was "' . strlen($manifest) .'" should be "' .
-                    $manifest_length['len'] . '"');
-            }
-            $info = self::_unserializeManifest($manifest);
-            if (!$info) {
-                die; // error declared in unserializeManifest
-            }
-            $alias = $info['alias'];
-            self::$_manifest[$file] = $info['manifest'];
-            $compressed = $info['compressed'];
-            self::$_fileStart[$file] = ftell($fp);
-            fclose($fp);
+            $last = fread($fp, $read);
+            $manifest .= $last;
         }
-        if ($compressed) {
+        if (strlen($manifest) < $manifest_length['len']) {
+            throw new Exception('ERROR: manifest length read was "' . 
+                strlen($manifest) .'" should be "' .
+                $manifest_length['len'] . '"');
+        }
+        $info = self::_unserializeManifest($manifest);
+        if ($info['alias']) {
+            $alias = $info['alias'];
+            $explicit = true;
+        } else {
+            $alias = $file;
+            $explicit = false;
+        }
+        self::$_manifest[$file] = $info['manifest'];
+        $compressed = $info['compressed'];
+        self::$_fileStart[$file] = ftell($fp);
+        fclose($fp);
+        if ($compressed & 0x00001000) {
             if (!function_exists('gzinflate')) {
-                die('Error: zlib extension is not enabled - gzinflate() function needed' .
+                throw new Exception('Error: zlib extension is not enabled - gzinflate() function needed' .
+                    ' for compressed .phars');
+            }
+        }
+        if ($compressed & 0x00002000) {
+            if (!function_exists('bzdecompress')) {
+                throw new Exception('Error: bzip2 extension is not enabled - bzdecompress() function needed' .
                     ' for compressed .phars');
             }
         }
         if (isset(self::$_pharMapping[$alias])) {
-            die('ERROR: PHP_Archive::mapPhar has already been called for alias "' .
+            throw new Exception('ERROR: PHP_Archive::mapPhar has already been called for alias "' .
                 $alias . '" cannot re-alias to "' . $file . '"');
         }
-        self::$_pharMapping[$alias] = array($file, $compressed, $dataoffset);
+        self::$_pharMapping[$alias] = array($file, $compressed, $dataoffset, $explicit);
+        self::$_pharFiles[$file] = $alias;
+    }
+
+    /**
+     * extract the manifest into an internal array
+     *
+     * @param string $manifest
+     * @return false|array
+     */
+    private static function _unserializeManifest($manifest)
+    {
+        // retrieve the number of files in the manifest
+        $info = unpack('V', substr($manifest, 0, 4));
+        $apiver = substr($manifest, 4, 2);
+        $apiver = bin2hex($apiver);
+        $apiver_dots = hexdec($apiver[0]) . '.' . hexdec($apiver[1]) . '.' . hexdec($apiver[2]);
+        $majorcompat = hexdec($apiver[0]);
+        $calcapi = explode('.', '@API-VER@');
+        if ($calcapi[0] != $majorcompat) {
+            throw new Exception('Phar is incompatible API version ' . $apiver_dots . ', but ' .
+                'PHP_Archive is API version @API-VER@');
+        }
+        if ($calcapi[0] === '0') {
+            if ('@API-VER@' != $apiver_dots) {
+                throw new Exception('Phar is API version ' . $apiver_dots .
+                    ', but PHP_Archive is API version @API-VER@', E_USER_ERROR);
+            }
+        }
+        $flags = unpack('V', substr($manifest, 6, 4));
+        $ret = array('compressed' => $flags & 0x00003000);
+        // signature is not verified by default in PHP_Archive, phar is better
+        $ret['hassignature'] = $flags & 0x00010000;
+        $aliaslen = unpack('V', substr($manifest, 10, 4));
+        if ($aliaslen) {
+            $ret['alias'] = substr($manifest, 14, $aliaslen[1]);
+        } else {
+            $ret['alias'] = false;
+        }
+        $manifest = substr($manifest, 14 + $aliaslen[1]);
+        $metadatalen = unpack('V', substr($manifest, 0, 4));
+        if ($metadatalen[1]) {
+            $ret['metadata'] = unserialize(substr($manifest, 4, $metadatalen[1]));
+            $manifest = substr($manifest, 4 + $metadatalen[1]);
+        } else {
+            $ret['metadata'] = null;
+            $manifest = substr($manifest, 4);
+        }
+        $offset = 0;
+        $start = 0;
+        for ($i = 0; $i < $info[1]; $i++) {
+            // length of the file name
+            $len = unpack('V', substr($manifest, $start, 4));
+            $start += 4;
+            // file name
+            $savepath = substr($manifest, $start, $len[1]);
+            $start += $len[1];
+            // retrieve manifest data:
+            // 0 = uncompressed file size
+            // 1 = timestamp of when file was added to phar
+            // 2 = compressed filesize
+            // 3 = crc32
+            // 4 = flags
+            // 5 = metadata length
+            $ret['manifest'][$savepath] = array_values(unpack('Va/Vb/Vc/Vd/Ve/Vf', substr($manifest, $start, 24)));
+            $ret['manifest'][$savepath][3] = sprintf('%u', $ret['manifest'][$savepath][3]);
+            if ($ret['manifest'][$savepath][5]) {
+                $ret['manifest'][$savepath][6] = unserialize(substr($manifest, $start + 24,
+                    $ret['manifest'][$savepath][5]));
+            } else {
+                $ret['manifest'][$savepath][6] = null;
+            }
+            $ret['manifest'][$savepath][7] = $offset;
+            $offset += $ret['manifest'][$savepath][2];
+            $start += 24 + $ret['manifest'][$savepath][5];
+        }
+        return $ret;
     }
 
     /**
@@ -234,7 +365,7 @@ class PHP_Archive
         $this->internalFileLength = self::$_manifest[$this->_archiveName][$path][2];
         // seek to offset of file header within the .phar
         if (is_resource(@$this->fp)) {
-            fseek($this->fp, self::$_fileStart[$this->_archiveName] + self::$_manifest[$this->_archiveName][$path][5]);
+            fseek($this->fp, self::$_fileStart[$this->_archiveName] + self::$_manifest[$this->_archiveName][$path][7]);
         }
     }
 
@@ -263,8 +394,10 @@ class PHP_Archive
                 }
             }
             @fclose($this->fp);
-            if (self::$_manifest[$this->_archiveName][$path][4] & PHP_ARCHIVE_COMPRESSED) {
+            if (self::$_manifest[$this->_archiveName][$path][4] & self::GZ) {
                 $data = gzinflate($data);
+            } elseif (self::$_manifest[$this->_archiveName][$path][4] & self::BZ2) {
+                $data = bzdecompress($data);
             }
             if (!isset(self::$_manifest[$this->_archiveName][$path]['ok'])) {
                 if (strlen($data) != $this->currentStat[7]) {
@@ -284,27 +417,79 @@ class PHP_Archive
     }
 
     /**
+     * Parse urls like phar:///fullpath/to/my.phar/file.txt
+     *
+     * @param string $file
+     * @return false|array
+     */
+    static protected function parseUrl($file)
+    {
+        if (substr($file, 0, 7) != 'phar://') {
+            return false;
+        }
+        $file = substr($file, 7);
+    
+        $ret = array('scheme' => 'phar');
+        $pos_p = strpos($file, '.phar.php');
+        $pos_z = strpos($file, '.phar.gz');
+        $pos_b = strpos($file, '.phar.bz2');
+        if ($pos_p) {
+            if ($pos_z) {
+                return false;
+            }
+            $ret['host'] = substr($file, 0, $pos_p + strlen('.phar.php'));
+            $ret['path'] = substr($file, strlen($ret['host']));
+        } elseif ($pos_z) {
+            $ret['host'] = substr($file, 0, $pos_z + strlen('.phar.gz'));
+            $ret['path'] = substr($file, strlen($ret['host']));
+        } elseif ($pos_b) {
+            $ret['host'] = substr($file, 0, $pos_z + strlen('.phar.bz2'));
+            $ret['path'] = substr($file, strlen($ret['host']));
+        } elseif (($pos_p = strpos($file, ".phar")) !== false) {
+            $ret['host'] = substr($file, 0, $pos_p + strlen('.phar'));
+            $ret['path'] = substr($file, strlen($ret['host']));
+        } else {
+            return false;
+        }
+        if (!$ret['path']) {
+            $ret['path'] = '/';
+        }
+        return $ret;
+    }
+    
+    /**
      * Locate the .phar archive in the include_path and detect the file to open within
      * the archive.
      *
-     * Possible parameters are phar://filename_within_phar.ext or
-     * phar://pharname.phar/filename_within_phar.ext
-     *
-     * phar://filename_within_phar.ext will simply use the last .phar opened.
+     * Possible parameters are phar://pharname.phar/filename_within_phar.ext
      * @param string a file within the archive
      * @return string the filename within the .phar to retrieve
      */
     public function initializeStream($file)
     {
-        $info = parse_url($file);
-        if (!isset($info['host']) || !count(self::$_pharMapping)) {
+        $info = @parse_url($file);
+        if (!$info) {
+            $info = self::parseUrl($file);
+        }
+        if (!$info) {
+            return false;
+        }
+        if (!isset($info['host'])) {
             // malformed internal file
             return false;
         }
+        if (!isset(self::$_pharFiles[$info['host']]) &&
+              !isset(self::$_pharMapping[$info['host']])) {
+            try {
+                self::loadPhar($info['host']);
+                // use alias from here out
+                $info['host'] = self::$_pharFiles[$info['host']];
+            } catch (Exception $e) {
+                return false;
+            }
+        }
         if (!isset($info['path'])) {
-            // last opened phar is requested
-            $info['path'] = $info['host'];
-            $info['host'] = '';
+            return false;
         } elseif (strlen($info['path']) > 1) {
             $info['path'] = substr($info['path'], 1);
         }
@@ -312,70 +497,13 @@ class PHP_Archive
             $this->_basename = $info['host'];
             $this->_archiveName = self::$_pharMapping[$info['host']][0];
             $this->_compressed = self::$_pharMapping[$info['host']][1];
-        } else {
-            // no such phar has been included, or last opened phar is requested
-            $pharinfo = end(self::$_pharMapping);
-            $this->_basename = key(self::$_pharMapping);
-            $this->_archiveName = $pharinfo[0];
-            $this->_compressed = $pharinfo[1];
+        } elseif (isset(self::$_pharFiles[$info['host']])) {
+            $this->_archiveName = $info['host'];
+            $this->_basename = self::$_pharFiles[$info['host']];
+            $this->_compressed = self::$_pharMapping[$this->_basename][1];
         }
         $file = $info['path'];
         return $file;
-    }
-
-    /**
-     * extract the manifest into an internal array
-     *
-     * @param string $manifest
-     * @return false|array
-     */
-    private static function _unserializeManifest($manifest)
-    {
-        // retrieve the number of files in the manifest
-        $info = unpack('V', substr($manifest, 0, 4));
-        $apiver = substr($manifest, 4, 2);
-        $apiver = bin2hex($apiver);
-        $apiver_dots = hexdec($apiver[0]) . '.' . hexdec($apiver[1]) . '.' . hexdec($apiver[2]);
-        $majorcompat = hexdec($apiver[0]);
-        $calcapi = explode('.', '@API-VER@');
-        if ($calcapi[0] != $majorcompat) {
-            trigger_error('Phar is incompatible API version ' . $apiver_dots . ', but ' .
-                'PHP_Archive is API version @API-VER@');
-            return false;
-        }
-        if ($calcapi[0] === '0') {
-            if ('@API-VER@' != $apiver_dots) {
-                trigger_error('Phar is API version ' . $apiver_dots .
-                    ', but PHP_Archive is API version @API-VER@', E_USER_ERROR);
-                return false;
-            }
-        }
-        $ret = array('compressed' => $apiver[3]);
-        $aliaslen = unpack('V', substr($manifest, 6, 4));
-        $ret['alias'] = substr($manifest, 10, $aliaslen[1]);
-        $manifest = substr($manifest, 10 + $aliaslen[1]);
-        $offset = 0;
-        $start = 0;
-        for ($i = 0; $i < $info[1]; $i++) {
-            // length of the file name
-            $len = unpack('V', substr($manifest, $start, 4));
-            $start += 4;
-            // file name
-            $savepath = substr($manifest, $start, $len[1]);
-            $start += $len[1];
-            // retrieve manifest data:
-            // 0 = uncompressed file size
-            // 1 = timestamp of when file was added to phar
-            // 2 = compressed filesize
-            // 3 = crc32
-            // 4 = flags
-            $ret['manifest'][$savepath] = array_values(unpack('Va/Vb/Vc/Vd/Ce', substr($manifest, $start, 17)));
-            $ret['manifest'][$savepath][3] = sprintf('%u', $ret['manifest'][$savepath][3]);
-            $ret['manifest'][$savepath][5] = $offset;
-            $offset += $ret['manifest'][$savepath][2];
-            $start += 17;
-        }
-        return $ret;
     }
 
     /**
@@ -550,7 +678,15 @@ class PHP_Archive
      */
     public function dir_opendir($path)
     {
-        $info = parse_url($path);
+        $info = @parse_url($path);
+        if (!$info) {
+            $info = self::parseUrl($path);
+            if (!$info) {
+                trigger_error('Error: "' . $path . '" is a file, and cannot be opened with opendir',
+                    E_USER_ERROR);
+                return false;
+            }
+        }
         $path = !empty($info['path']) ?
             $info['host'] . $info['path'] : $info['host'] . '/';
         $path = $this->initializeStream('phar://' . $path);

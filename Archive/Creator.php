@@ -9,6 +9,7 @@
  * Needed for file manipulation
  */
 require_once 'System.php';
+require_once 'PHP/Archive.php';
 /**
  * PHP_Archive Class creator (implements .phar)
  *
@@ -27,7 +28,7 @@ require_once 'System.php';
  * @package PHP_Archive
  * @category PHP
  */
-class PHP_Archive_Creator implements ArrayAccess
+class PHP_Archive_Creator
 {
     /**
      * @var string The Archive Filename
@@ -55,6 +56,12 @@ class PHP_Archive_Creator implements ArrayAccess
     protected $compress = false;
 
     /**
+     * Phar bitmapped flags
+     *
+     * @var int
+     */
+    protected $flags = 0;
+    /**
      * @var boolean Whether or not to collapse (remove whitespace/comments)
      */
     protected $collapse = false;
@@ -72,6 +79,12 @@ class PHP_Archive_Creator implements ArrayAccess
     protected $manifest = array();
 
     /**
+     * Used to save Phar-specific metadata
+     * @var mixed
+     */
+    protected $metadata = null;
+ 
+    /**
      * A list of custom callbacks that should be used for manipulating file contents
      * prior to adding to the phar.
      *
@@ -79,36 +92,6 @@ class PHP_Archive_Creator implements ArrayAccess
      */
     private $_magicRequireCallbacks = array();
 
-    /**#@+
-     * ArrayAccess methods
-     */
-    public function offsetExists($offset)
-    {
-        return is_string($offset) && isset($this->manifest[$offset]);
-    }
-
-    public function offsetGet($offset)
-    {
-        if (is_string($offset) && isset($this->manifest[$offset])) {
-            return file_get_contents($this->manifest[$offset]['tempfile']);
-        }
-    }
-
-    public function offsetSet($offset, $value)
-    {
-        if (is_string($offset)) {
-            $this->addString($value, $offset, false);
-        }
-    }
-
-    public function offsetUnset($offset)
-    {
-        if (is_string($offset) && isset($this->manifest[$offset])) {
-            unset($this->manifest[$offset]);
-        }
-    }
-
-    /**#@-*/
     /**
      * @param string
      */
@@ -138,7 +121,8 @@ class PHP_Archive_Creator implements ArrayAccess
      *                                use this option for libraries
      * @param string $alias alias name like "go-pear.phar" to be used for opening
      *                      files from this phar
-     * @param boolean $compress Whether to compress the files or not (will cause slowdown!)
+     * @param string|false $compress Whether to compress the files or not (will cause slowdown!)
+     *                               use 'gz' for zlib compression, 'bz2' for bzip2 compression
      * @param bool $relyOnPhar if true, then a slim, phar extension-dependent .phar will be
      *                         created
      * @param bool $collapse Remove whitespace and comments from PHP_Archive class
@@ -157,7 +141,7 @@ class PHP_Archive_Creator implements ArrayAccess
         $contents = trim(str_replace(array('<?php', '?>'), array('', ''), $contents));
         // make sure .phars added to CVS don't get checksum errors because of CVS tags
         $contents = str_replace('* @version $Id', '* @version Id', $contents);
-        $unpack_code = "<?php #PHP_ARCHIVE_HEADER-@API-VER@
+        $unpack_code = "<?php
 error_reporting(E_ALL);
 if (function_exists('mb_internal_encoding')) {
     mb_internal_encoding('ASCII');
@@ -169,12 +153,13 @@ if (function_exists('mb_internal_encoding')) {
             $unpack_code .= $contents;
             $unpack_code .= "}
 if (!class_exists('Phar')) {
-    if (!in_array('phar', stream_get_wrappers())) {
-        stream_wrapper_register('phar', 'PHP_Archive');
-    }
     PHP_Archive::mapPhar(__FILE__, __COMPILER_HALT_OFFSET__);
 } else {
-    Phar::mapPhar();
+    try {
+        Phar::mapPhar();
+    } catch (Exception \$e) {
+        echo \$e->getMessage();
+    }
 }
 if (class_exists('PHP_Archive') && !in_array('phar', stream_get_wrappers())) {
     stream_wrapper_register('phar', 'PHP_Archive');
@@ -184,7 +169,12 @@ if (class_exists('PHP_Archive') && !in_array('phar', stream_get_wrappers())) {
             $unpack_code .= "if (!extension_loaded('phar')) {";
             $unpack_code .= 'die("Error - phar extension not loaded");
 }
-Phar::mapPhar();';
+try {
+    Phar::mapPhar();
+} catch (Exception \$e) {
+    echo \$e->getMessage();
+}
+';
         }
         $unpack_code .= <<<PHP
 @ini_set('memory_limit', -1);
@@ -199,6 +189,11 @@ require_once \'phar://@ALIAS@/' . addslashes($init_file) . '\';
         }
         $unpack_code .= '__HALT_COMPILER();';
         file_put_contents($this->temp_path . DIRECTORY_SEPARATOR . 'loader.php', $unpack_code);
+    }
+
+    public function setPharMetadata($metadata)
+    {
+        $this->_metadata = $metadata;
     }
 
     /**
@@ -221,12 +216,14 @@ require_once \'phar://@ALIAS@/' . addslashes($init_file) . '\';
      *
      * @param string $file Path of the File to add
      * @param string $save_path The save location of the file in the archive
+     * @param false  $magicrequire unused, set this to false
+     * @param mixed  $metadata Any file-specific metadata to save
      * @return boolean
      */
     
-    public function addFile($file, $save_path, $magicrequire = false)
+    public function addFile($file, $save_path, $magicrequire = false, $metadata = null)
     {
-        return $this->addString(file_get_contents($file), $save_path, $magicrequire);
+        return $this->addString(file_get_contents($file), $save_path, $magicrequire, $metadata);
     }
 
     /**
@@ -237,7 +234,8 @@ require_once \'phar://@ALIAS@/' . addslashes($init_file) . '\';
      * @return boolean
      */
     
-    public function addString($file_contents, $save_path, $magicrequire = false)
+    public function addString($file_contents, $save_path, $magicrequire = false,
+                              $metadata = null)
     {
         $save_path = self::processFile($save_path);
         if (count($this->_magicRequireCallbacks)) {
@@ -256,8 +254,15 @@ require_once \'phar://@ALIAS@/' . addslashes($init_file) . '\';
         $crc32 = crc32($file_contents);
         // save crc32 of file and the uncompressed file size, so we
         // can do a sanity check on the file when opening it from the phar
-        $file_contents =
-            ($this->compress ? gzdeflate($file_contents, 9) : $file_contents);
+        if ($this->compress) {
+            if ($this->compress == 'gz') {
+                $this->flags |= PHP_Archive::GZ;
+                $file_contents = gzdeflate($file_contents, 9);
+            } elseif ($this->compress == 'bz2') {
+                $this->flags |= PHP_Archive::BZ2;
+                $file_contents = bzcompress($file_contents, 9);
+            }
+        }
         System::mkdir(array('-p', dirname($this->temp_path . DIRECTORY_SEPARATOR . 'contents' .
             DIRECTORY_SEPARATOR . $save_path)));
         if (file_exists($this->temp_path . DIRECTORY_SEPARATOR . 'contents' .
@@ -266,6 +271,10 @@ require_once \'phar://@ALIAS@/' . addslashes($init_file) . '\';
         }
         file_put_contents($this->temp_path . DIRECTORY_SEPARATOR . 'contents' .
             DIRECTORY_SEPARATOR . $save_path, $file_contents);
+        $flags = 0;
+        if ($this->compress) {
+            $flags |= ($this->compress == 'gz') ? 0x00001000 : 0x00002000;
+        }
         $this->manifest[$save_path] =
             array(
                 'tempfile' => $this->temp_path . DIRECTORY_SEPARATOR . 'contents' .
@@ -273,7 +282,8 @@ require_once \'phar://@ALIAS@/' . addslashes($init_file) . '\';
                 'originalsize' => $size,
                 'actualsize' => strlen($file_contents),
                 'crc32' => $crc32,
-                'flags' => $this->compress ? 1 : 0); // gz compression = 0x1
+                'flags' => $flags,
+                'metadata' => $metadata);
     }
 
     /**
@@ -609,7 +619,8 @@ require_once \'phar://@ALIAS@/' . addslashes($init_file) . '\';
                 time(), // save time = 1
                 $info['actualsize'], // actual size in the .phar = 2
                 $info['crc32'], // crc32 = 3
-                $info['flags']); // flags = 4
+                $info['flags'], // flags = 4
+                $info['metadata']); // metadata = 5
             $offset += $info['actualsize'];
         }
         $manifest = $this->serializeManifest($manifest);
@@ -645,7 +656,14 @@ require_once \'phar://@ALIAS@/' . addslashes($init_file) . '\';
         $apiver = chr(((int) ((int) $apiver[0]) << 4) + ((int) $apiver[1])) .
             chr((int)($apiver[2] << 4) + ($this->compress ? 0x1 : 0));
         $ret = $apiver;
+        $ret .= pack('V', $this->flags);
         $ret .= pack('V', strlen($this->alias)) . $this->alias;
+        if ($this->metadata === null) {
+            $ret .= pack('V', 0);
+        } else {
+            $metadata = serialize($this->metadata);
+            $ret .= pack('V', strlen($metadata)) . $metadata;
+        }
         foreach ($manifest as $savepath => $info) {
             // save the string length, then the string, then this info
             // uncompressed file size
@@ -653,8 +671,16 @@ require_once \'phar://@ALIAS@/' . addslashes($init_file) . '\';
             // compressed file size
             // crc32
             // flags
+            // metadata
+            $metadata = array_pop($info);
             $ret .= pack('V', strlen($savepath)) . $savepath . call_user_func_array('pack',
-                array_merge(array('VVVVC'), $info));
+                array_merge(array('VVVVV'), $info));
+            if ($metadata === null) {
+                $ret .= pack('V', 0);
+            } else {
+                $metadata = serialize($metadata);
+                $ret .= pack('V', strlen($metadata)) . $metadata;
+            }
         }
         // save the size of the manifest
         return pack('VV', strlen($ret) + 4, count($manifest)) . $ret;
