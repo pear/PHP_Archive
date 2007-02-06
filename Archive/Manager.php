@@ -24,6 +24,9 @@ class PHP_Archive_Manager
 {
     const GZ = 0x00001000;
     const BZ2 = 0x00002000;
+    const SIG = 0x00010000;
+    const SHA1 = 0x0002;
+    const MD5 = 0x0001;
     private $_alias;
     private $_archiveName;
     private $_apiVersion;
@@ -34,6 +37,8 @@ class PHP_Archive_Manager
     private $_manifestSize;
     private $_html;
     private $_metadata;
+    private $_sigtype;
+    private $_signature = false;
     /**
      * Locate the .phar archive in the include_path and detect the file to open within
      * the archive.
@@ -316,6 +321,51 @@ class PHP_Archive_Manager
                         'actual' => crc32($data)));
             }
         }
+        if ($this->_flags & self::SIG) {
+            do {
+                $end = ftell($fp);
+                $data = fread($fp, 28);
+                if (substr($data, strlen($data) - 4) != 'GBMB') {
+                    $errors[] = new PHP_Archive_ExceptionExtended(
+                        PHP_Archive_ExceptionExtended::NOSIGNATUREMAGIC,
+                        array('archive' => $this->_archiveName));
+                    break;
+                }
+                $type = unpack('V', substr($data, strlen($data) - 8, 4));
+                $all = file_get_contents($this->_archiveName);
+                switch ($type[1]) {
+                    case self::MD5 :
+                        $hash = substr($all, strlen($all) - 16 - 8, 16);
+                        $all = substr($all, 0, strlen($all) - 16 - 8);
+                        if (md5(substr($all, 0, $end), true) != $hash) {
+                            $errors[] = new PHP_Archive_ExceptionExtended(
+                                PHP_Archive_ExceptionExtended::BADSIGNATURE,
+                                array('archive' => $this->_archiveName));
+                        } else {
+                            $this->_sigtype = 'MD5';
+                            $this->_signature = md5($all);
+                        }
+                        break;
+                    case self::SHA1 :
+                        $hash = substr($all, strlen($all) - 20 - 8, 20);
+                        if (sha1(substr($all, 0, $end), true) != $hash) {
+                            $errors[] = new PHP_Archive_ExceptionExtended(
+                                PHP_Archive_ExceptionExtended::BADSIGNATURE,
+                                array('archive' => $this->_archiveName));
+                        } else {
+                            $this->_sigtype = 'SHA1';
+                            $this->_signature = sha1($all);
+                        }
+                        break;
+                    default :
+                        $errors[] = new PHP_Archive_ExceptionExtended(
+                            PHP_Archive_ExceptionExtended::UNKNOWNSIGTYPE,
+                            array('archive' => $this->_archiveName,
+                                'type' => bin2hex(substr($data, strlen($data) - 8, 4))));
+                        break;
+                }
+            } while (false);
+        }
         @fclose($fp);
         if (count($errors)) {
             throw new PHP_Archive_Exception('invalid phar "' . $this->_archiveName . '"', $errors);
@@ -344,6 +394,10 @@ class PHP_Archive_Manager
             'Phar Metadata' => var_export($this->_metadata, true),
             'Global compressed flag' => bin2hex($this->_flags),
         );
+        if ($this->_signature) {
+            $ret['Signature Type'] = $this->_sigtype;
+            $ret['Signature'] = $this->_signature;
+        }
         // 0 = uncompressed file size
         // 1 = save timestamp
         // 2 = compressed file size

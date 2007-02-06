@@ -83,7 +83,14 @@ class PHP_Archive_Creator
      * @var mixed
      */
     protected $metadata = null;
- 
+
+    /**
+     * Signature type, either PHP_Archive::SHA1 or PHP_Archive::MD5
+     *
+     * @var int
+     */
+    protected $sig;
+
     /**
      * A list of custom callbacks that should be used for manipulating file contents
      * prior to adding to the phar.
@@ -191,9 +198,32 @@ require_once \'phar://@ALIAS@/' . addslashes($init_file) . '\';
         file_put_contents($this->temp_path . DIRECTORY_SEPARATOR . 'loader.php', $unpack_code);
     }
 
+    /**
+     * Set meta-data for entire Phar archive
+     *
+     * @param mixed $metadata
+     */
     public function setPharMetadata($metadata)
     {
         $this->_metadata = $metadata;
+    }
+
+    /**
+     * Append a signature to this phar when it is created
+     */
+    public function useSHA1Signature()
+    {
+        $this->flags |= PHP_Archive::SIG;
+        $this->sig = PHP_Archive::SHA1;
+    }
+
+    /**
+     * Append a signature to this phar when it is created
+     */
+    public function useMD5Signature()
+    {
+        $this->flags |= PHP_Archive::SIG;
+        $this->sig = PHP_Archive::MD5;
     }
 
     /**
@@ -632,6 +662,19 @@ require_once \'phar://@ALIAS@/' . addslashes($init_file) . '\';
             fclose($file);
         }
         fclose($newfile);
+        if ($this->flags & PHP_Archive::SIG) {
+            if ($this->sig == PHP_Archive::SHA1) {
+                $sig = sha1_file($file_path, true);
+            } elseif ($this->sig == PHP_Archive::MD5) {
+                $sig = md5_file($file_path, true);
+            }
+            $fp = fopen($file_path, 'ab');
+            fwrite($fp, $sig);
+            // add signature indicator plus the magic indicator
+            // ah to be immortalized in file format
+            fwrite($fp, pack('V', $this->sig) . 'GBMB');
+            fclose($fp);
+        }
         return true;
     }
 

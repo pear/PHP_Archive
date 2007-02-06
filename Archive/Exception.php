@@ -31,6 +31,8 @@ class PHP_Archive_ExceptionExtended extends PHP_Archive_Exception
     const FILECORRUPTEDGZ = 11;
     const FILECORRUPTEDSIZE = 12;
     const FILECORRUPTEDCRC = 13;
+    const NOSIGNATUREMAGIC = 14;
+    const BADSIGNATURE = 15;
     private static $_messages = array(
         'en' => array(
             self::NOOPEN => 'Cannot open "%archive%"',
@@ -46,6 +48,9 @@ class PHP_Archive_ExceptionExtended extends PHP_Archive_Exception
             self::FILECORRUPTEDSIZE => '"%archive%" file "%file%" is %actual% bytes, but size indicator at file start says it should be %expected% bytes',
             self::FILECORRUPTEDCRC => '"%archive%" file "%file%" has a crc32 of "%actual%" but was expecting "%expected%"',
             self::UNKNOWNAPI => '"%archive%" has unknown API version "%ver%"',
+            self::NOSIGNATUREMAGIC => '%archive% has a signature, but does not have the magic "GBMB" flags',
+            self::UNKNOWNSIGTYPE => '%archive% has unknown signature type "%type%"',
+            self::BADSIGNATURE => '%archive% is corrupted: signature does not match',
         )
     );
     private static $_lang = 'en';
