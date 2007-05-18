@@ -117,6 +117,208 @@ class PHP_Archive
      */
     private $_basename;
 
+
+    /**
+     * Default MIME types used for the web front controller
+     *
+     * @var array
+     */
+    public static $defaultmimes = array(
+            'aif' => 'audio/x-aiff',
+            'aiff' => 'audio/x-aiff',
+            'arc' => 'application/octet-stream',
+            'arj' => 'application/octet-stream',
+            'art' => 'image/x-jg',
+            'asf' => 'video/x-ms-asf',
+            'asx' => 'video/x-ms-asf',
+            'avi' => 'video/avi',
+            'bin' => 'application/octet-stream',
+            'bm' => 'image/bmp',
+            'bmp' => 'image/bmp',
+            'bz2' => 'application/x-bzip2',
+            'css' => 'text/css',
+            'doc' => 'application/msword',
+            'dot' => 'application/msword',
+            'dv' => 'video/x-dv',
+            'dvi' => 'application/x-dvi',
+            'eps' => 'application/postscript',
+            'exe' => 'application/octet-stream',
+            'gif' => 'image/gif',
+            'gz' => 'application/x-gzip',
+            'gzip' => 'application/x-gzip',
+            'htm' => 'text/html',
+            'html' => 'text/html',
+            'ico' => 'image/x-icon',
+            'jpe' => 'image/jpeg',
+            'jpg' => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'js' => 'application/x-javascript',
+            'log' => 'text/plain',
+            'mid' => 'audio/x-midi',
+            'mov' => 'video/quicktime',
+            'mp2' => 'audio/mpeg',
+            'mp3' => 'audio/mpeg3',
+            'mpg' => 'audio/mpeg',
+            'pdf' => 'aplication/pdf',
+            'png' => 'image/png',
+            'rtf' => 'application/rtf',
+            'tif' => 'image/tiff',
+            'tiff' => 'image/tiff',
+            'txt' => 'text/plain',
+            'xml' => 'text/xml',
+        );
+
+    public static $defaultphp = array(
+        'php' => true
+        );
+
+    public static $defaultphps = array(
+        'phps' => true
+        );
+
+    public static $deny = array('/.+\.inc$/');
+
+    public static function viewSource($archive, $file)
+    {
+        // security, idea borrowed from PHK
+        if (!file_exists($archive . '.introspect')) {
+            header("HTTP/1.0 404 Not Found");
+            exit;
+        }
+        if (self::_fileExists($archive, $_GET['viewsource'])) {
+            $source = highlight_file('phar://@ALIAS@/' .
+                $_GET['viewsource'], true);
+            header('Content-Type: text/html');
+            header('Content-Length: ' . strlen($source));
+            echo '<html><head><title>Source of ',
+                htmlspecialchars($_GET['viewsource']), '</title></head>';
+            echo '<body><h1>Source of ',
+                htmlspecialchars($_GET['viewsource']), '</h1>';
+            if (isset($_GET['introspect'])) {
+                echo '<a href="', htmlspecialchars($_SERVER['PHP_SELF']),
+                    '?introspect=', urlencode(htmlspecialchars($_GET['introspect'])),
+                    '">Return to ', htmlspecialchars($_GET['introspect']), '</a><br />';
+            }
+            echo $source;
+            exit;
+        } else {
+            header("HTTP/1.0 404 Not Found");
+            exit;
+        }
+        
+    }
+
+    public static function introspect($archive, $dir)
+    {
+        // security, idea borrowed from PHK
+        if (!file_exists($archive . '.introspect')) {
+            header("HTTP/1.0 404 Not Found");
+            exit;
+        }
+        if (!$dir) {
+            $dir = '/';
+        }
+        $dir = self::processFile($dir);
+        if ($dir[0] != '/') {
+            $dir = '/' . $dir;
+        }
+        try {
+            $self = htmlspecialchars($_SERVER['PHP_SELF']);
+            $iterate = new DirectoryIterator('phar://@ALIAS@' . $dir);
+            echo '<html><head><title>Introspect ', htmlspecialchars($dir),
+                '</title></head><body><h1>Introspect ', htmlspecialchars($dir),
+                '</h1><ul>';
+            if ($dir != '/') {
+                echo '<li><a href="', $self, '?introspect=',
+                    htmlspecialchars(dirname($dir)), '">..</a></li>';
+            }
+            foreach ($iterate as $entry) {
+                if ($entry->isDot()) continue;
+                $name = self::processFile($entry->getPathname());
+                $name = str_replace('phar://@ALIAS@/', '', $name);
+                if ($entry->isDir()) {
+                    echo '<li><a href="', $self, '?introspect=',
+                        urlencode(htmlspecialchars($name)),
+                        '">',
+                        htmlspecialchars($entry->getFilename()), '/</a> [directory]</li>';
+                } else {
+                    echo '<li><a href="', $self, '?introspect=',
+                        urlencode(htmlspecialchars($dir)), '&viewsource=',
+                        urlencode(htmlspecialchars($name)),
+                        '">',
+                        htmlspecialchars($entry->getFilename()), '</a></li>';
+                }
+            }
+            exit;
+        } catch (Exception $e) {
+            echo '<html><head><title>Directory not found: ',
+                htmlspecialchars($dir), '</title></head>',
+                '<body><h1>Directory not found: ', htmlspecialchars($dir), '</h1>',
+                '<p>Try <a href="', htmlspecialchars($_SERVER['PHP_SELF']), '?introspect=/">',
+                'This link</a></p></body></html>';
+            exit;
+        }
+    }
+
+    public static function webFrontController($initfile)
+    {
+        if (isset($_SERVER) && isset($_SERVER['REQUEST_URI'])) {
+            $uri = parse_url($_SERVER['REQUEST_URI']);
+            $archive = realpath($_SERVER['SCRIPT_FILENAME']);
+            $subpath = str_replace('/' . basename($archive), '', $uri['path']);
+            if (!$subpath || $subpath == '/') {
+                if (isset($_GET['viewsource'])) {
+                    self::viewSource($archive, $_GET['viewsource']);
+                }
+                if (isset($_GET['introspect'])) {
+                    self::introspect($archive, $_GET['introspect']);
+                }
+                $subpath = '/' . $initfile;
+            }
+            if (!self::_fileExists($archive, substr($subpath, 1))) {
+                header("HTTP/1.0 404 Not Found");
+                exit;
+            }
+            foreach (self::$deny as $pattern) {
+                if (preg_match($pattern, $subpath)) {
+                    header("HTTP/1.0 404 Not Found");
+                    exit;
+                }
+            }
+            $inf = pathinfo(basename($subpath));
+            if (!isset($inf['extension'])) {
+                header('Content-Type: text/plain');
+                header('Content-Length: ' .
+                    self::_filesize($archive, substr($subpath, 1)));
+                readfile('phar://@ALIAS@' . $subpath);
+                exit;
+            }
+            if (isset(self::$defaultphp[$inf['extension']])) {
+                include 'phar://@ALIAS@' . $subpath;
+                exit;
+            }
+            if (isset(self::$defaultmimes[$inf['extension']])) {
+                header('Content-Type: ' . self::$defaultmimes[$inf['extension']]);
+                header('Content-Length: ' .
+                    self::_filesize($archive, substr($subpath, 1)));
+                readfile('phar://@ALIAS@' . $subpath);
+                exit;
+            }
+            if (isset(self::$defaultphps[$inf['extension']])) {
+                header('Content-Type: text/html');
+                $c = highlight_file('phar://@ALIAS@' . $subpath, true);
+                header('Content-Length: ' . strlen($c));
+                echo $c;
+                exit;
+            }
+            header('Content-Type: text/plain');
+            header('Content-Length: ' .
+                    self::_filesize($archive, substr($subpath, 1)));
+            readfile('phar://@ALIAS@' . $subpath);
+            exit;
+        }
+    }
+
     /**
      * Allows loading an external Phar archive without include()ing it
      *
@@ -373,6 +575,17 @@ class PHP_Archive
         }
     }
 
+    private static function _fileExists($archive, $path)
+    {
+        return isset(self::$_manifest[$archive]) &&
+            isset(self::$_manifest[$archive][$path]);
+    }
+
+    private static function _filesize($archive, $path)
+    {
+        return self::$_manifest[$archive][$path][0];
+    }
+
     /**
      * Seek to a file within the master archive, and extract its contents
      * @param string
@@ -471,6 +684,7 @@ class PHP_Archive
      */
     public function initializeStream($file)
     {
+        $file = self::processFile($file);
         $info = @parse_url($file);
         if (!$info) {
             $info = self::parseUrl($file);
@@ -730,6 +944,9 @@ class PHP_Archive
             }
         }
         @fclose($this->fp);
+        if (!count($this->_dirFiles)) {
+            return false;
+        }
         @uksort($this->_dirFiles, 'strnatcmp');
         return true;
     }

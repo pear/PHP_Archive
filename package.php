@@ -2,21 +2,10 @@
 require_once 'PEAR/PackageFileManager.php';
 require_once 'PEAR/PackageFileManager2.php';
 PEAR::setErrorHAndling(PEAR_ERROR_DIE);
-$version = '0.10.0';
+$version = '0.11.0';
 $apiversion = '1.0.0';
 $notes = '
-Update to match phar extension
-
-Final API for 1.0.0 is set
-
-Add support for:
-
- * Phar metadata - any serialized value
- * file-specific metadata - any serialized value
- * bzip2 compression of files
- * SHA1/MD5 signature creation (Phar extension can use this,
-   PHP_Archive does not on open for performance reasons)
- * file permissions (always set to 0555)';
+Add support for introspection (web) and front controller (web)';
 
 
 $package = PEAR_PackageFileManager2::importOptions(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'package.xml',
@@ -42,6 +31,7 @@ $package->setPhpDep('5.1.0');
 $package->setPearinstallerDep('1.4.3');
 $package->addReplacement('Archive.php', 'package-info', '@API-VER@', 'api-version');
 $package->addReplacement('Archive/Creator.php', 'package-info', '@API-VER@', 'api-version');
+$package->addReplacement('Archive/Creator.php', 'pear-config', '@data_dir@', 'data_dir');
 
 $package->generateContents();
 

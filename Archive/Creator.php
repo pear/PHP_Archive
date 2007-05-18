@@ -78,6 +78,9 @@ class PHP_Archive_Creator
      */
     protected $manifest = array();
 
+    protected $relyOnPhar = false;
+    protected $initFile = false;
+
     /**
      * Used to save Phar-specific metadata
      * @var mixed
@@ -139,6 +142,8 @@ class PHP_Archive_Creator
     {
         $this->compress = $compress;
         $this->collapse = $collapse;
+        $this->relyOnPhar = $relyOnPhar;
+        $this->initFile = $init_file;
         $this->temp_path = System::mktemp(array('-d', 'phr'));
         $contents = file_get_contents(dirname(dirname(__FILE__)) .
             DIRECTORY_SEPARATOR . 'Archive.php');
@@ -183,9 +188,7 @@ try {
 }
 ';
         }
-        $unpack_code .= <<<PHP
-@ini_set('memory_limit', -1);
-PHP;
+        $unpack_code .= "\n@ini_set('memory_limit', -1);\n";
 
         $this->alias = $alias;
         if ($init_file) {
@@ -254,6 +257,74 @@ require_once \'phar://@ALIAS@/' . addslashes($init_file) . '\';
     public function addFile($file, $save_path, $magicrequire = false, $metadata = null)
     {
         return $this->addString(file_get_contents($file), $save_path, $magicrequire, $metadata);
+    }
+
+    /**
+     * For web-based applications, construct a default front controller
+     * that will direct to the correct file within the phar.
+     *
+     * @param string $templatefile full path to custom template, or filename of
+     *                             default template, such as "web_frontcontroller_phar.tpl"
+     *                             by default, web_frontcontroller.tpl is used
+     */
+    public function useDefaultFrontController($defaultmimes = false, $defaultphp = false,
+                    $defaultphps = false, $deny = false)
+    {
+        $contents = file_get_contents($this->temp_path . DIRECTORY_SEPARATOR . 'loader.php');
+        if ($this->relyOnPhar) {
+            if (!$defaultmimes) {
+                $defaultmimes = PHP_Archive::$defaultmimes;
+            }
+            if (!$defaultphp) {
+                $defaultphp = PHP_Archive::$defaultphp;
+            }
+            if (!$defaultphps) {
+                $defaultphps = PHP_Archive::$defaultphps;
+            }
+            if (!$deny) {
+                $deny = PHP_Archive::$deny;
+            }
+            $templatefile = '@data_dir@/PHP_Archive/data/phar_frontcontroller.tpl';
+            $template = file_get_contents($templatefile);
+            if (!$template) {
+                throw new PHP_Archive_Exception('Invalid template file "' . $templatefile . '"');
+            }
+            $template = str_replace('@mime@', var_export($defaultmimes, true), $template);
+            $template = str_replace('@php@', var_export($defaultphp, true), $template);
+            $template = str_replace('@phps@', var_export($defaultphps, true), $template);
+            $template = str_replace('@alias@', $this->alias, $template);
+            $template = str_replace('@deny@', var_export($deny, true), $template);
+            $template = str_replace('@initfile@', $this->initFile, $template);
+            $contents = str_replace("@ini_set('memory_limit', -1);",
+                "@ini_set('memory_limit', -1);\n" . $template . "\n");
+        } else {
+            $extra = '';
+            if ($defaultmimes || $defaultphp || $defaultphps || $deny) {
+                if ($defaultmimes) {
+                    $extra .= "\nPHP_Archive::\$defaultmimes = " .
+                        var_export($defaultmimes, true) . "\n";
+                }
+                if ($defaultphp) {
+                    $extra .= "\nPHP_Archive::\$defaultphp = " .
+                        var_export($defaultphp, true) . "\n";
+                }
+                if ($defaultphps) {
+                    $extra .= "\nPHP_Archive::\$defaultphps = " .
+                        var_export($defaultphps, true) . "\n";
+                }
+                if ($deny) {
+                    $extra .= "\nPHP_Archive::\$deny = " .
+                        var_export($deny, true) . "\n";
+                }
+            }
+            $contents = str_replace("@ini_set('memory_limit', -1);",
+                "@ini_set('memory_limit', -1);\n{$extra}" .
+                "if (!empty(\$_SERVER['REQUEST_URI'])) " .
+                "PHP_Archive::webFrontController('" .
+                addslashes($this->initFile) . "');\n", $contents);
+        }
+        file_put_contents($this->temp_path . DIRECTORY_SEPARATOR . 'loader.php',
+            $contents);
     }
 
     /**
@@ -632,13 +703,15 @@ require_once \'phar://@ALIAS@/' . addslashes($init_file) . '\';
         if (isset($this->alias)) {
             $loader = file_get_contents($this->temp_path . DIRECTORY_SEPARATOR . 'loader.php');
             $loader = str_replace('@ALIAS@', addslashes($this->alias), $loader);
-            fwrite($newfile, $loader);
         } else {
             $loader = file_get_contents($this->temp_path . DIRECTORY_SEPARATOR . 'loader.php');
             $loader = str_replace('@ALIAS@', addslashes(basename($file_path)), $loader);
-            fwrite($newfile, $loader);
             $this->alias = addslashes(basename($file_path));
         }
+        $loader = str_replace('__COMPILER_HALT_OFFSET__', str_pad(strlen($loader),
+            strlen('__COMPILER_HALT_OFFSET__')), $loader);
+        fwrite($newfile, $loader);
+
         // relative offset from end of manifest
         $offset = 0;
         $manifest = array();
