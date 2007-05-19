@@ -388,6 +388,11 @@ require_once \'phar://@ALIAS@/' . addslashes($init_file) . '\';
                 'metadata' => $metadata);
     }
 
+    public function clearMagicRequire()
+    {
+        $this->_magicRequireCallbacks = array();
+    }
+
     /**
      * prepends all include/require calls with "phar://alias"
      *
@@ -431,6 +436,73 @@ require_once \'phar://@ALIAS@/' . addslashes($init_file) . '\';
         return $file_contents;
     }
 
+    public function tokenMagicRequire($contents, $path)
+    {
+        $info = pathinfo($path);
+        if (!isset($info['extension'])) {
+            return $contents;
+        }
+        if ($info['extension'] != 'php') {
+            return $contents;
+        }
+        $alias = '\'phar://' . $this->alias . '/\' . ';
+        $contents = token_get_all($contents);
+        $inphp = false;
+        $finished = '';
+        for ($i = 0; $i < count($contents); $i++) {
+            $token = $contents[$i];
+            if (!$inphp) {
+                if (!is_array($token)) {
+                    $finished .= $token;
+                    continue;
+                }
+                if ($token[0] == T_OPEN_TAG) {
+                    $finished .= $token[1];
+                    $inphp = true;
+                    continue;
+                }
+            }
+            if (!is_array($token)) {
+                $finished .= $token;
+                continue;
+            }
+            if ($token[0] == T_CLOSE_TAG) {
+                $finished .= $token[1];
+                $inphp = false;
+                continue;
+            }
+            if ($token[0] != T_INCLUDE && $token[0] != T_INCLUDE_ONCE &&
+                  $token[0] != T_REQUIRE && $token[0] != T_REQUIRE_ONCE) {
+                $finished .= $token[1];
+                continue;
+            }
+            $finished .= $token[1];
+            $new = '';
+            $done = false;
+            $token = $contents[++$i];
+            for (;!$done;$i++) {
+                $token = $contents[$i];
+                if (!is_array($token)) {
+                    if ($token == '(' || $token == '{' || $token == '"' ||
+                          $token == "'") {
+                        $finished .= ' ' . $alias . $token;
+                        continue 2;
+                    }
+                    $finished .= $token;
+                    // we have some oddness, don't touch this with a 10-foot pole
+                    continue 2;
+                }
+                if ($token[0] == T_WHITESPACE) {
+                    $finished .= $token[1];
+                    continue;
+                }
+                $done = true;
+                $finished .= $alias . $token[1];
+                $i--;
+            }
+        }
+        return $finished;
+    }
     /**
      * Tell whether to ignore a file or a directory
      * allows * and ? wildcards
@@ -624,15 +696,17 @@ require_once \'phar://@ALIAS@/' . addslashes($init_file) . '\';
      * @param array  files to ignore
      * @param array  files to include (all others ignored)
      * @param bool   If set, then "require_once '" will be replaced with
-     *               "require_once 'phar://$magicrequire/"
+     *               "require_once 'phar://$magicrequire/" [deprecated]
+     * @param string Directory to consider as the top-level directory
      * @return boolean
      */
     
-    public function addDir($dir, $ignore = array(), $include = array(), $magicrequire = false)
+    public function addDir($dir, $ignore = array(), $include = array(), $magicrequire = false,
+                           $toplevel = null)
     {
         $this->_setupIgnore($ignore, 1);
         $this->_setupIgnore($include, 0);
-        $list = $this->dirList($dir);
+        $list = $this->dirList($dir, $toplevel);
         return $this->addArray($list, $magicrequire);
     }
 
