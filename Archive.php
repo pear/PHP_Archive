@@ -857,6 +857,22 @@ class PHP_Archive
                 $this->_setCurrentFile($file);
                 $isdir = false;
             } else {
+                do {
+                    $isdir = false;
+                    if ($file == '/') {
+                        break;
+                    }
+                    foreach (self::$_manifest[$this->_archiveName] as $path => $info) {
+                        if (strpos($path, $file) === 0) {
+                            if (strlen($path) > strlen($file) &&
+                                  $path[strlen($file)] == '/') {
+                                break 2;
+                            }
+                        }
+                    }
+                    // no files exist and no directories match this string
+                    return false;
+                } while (false);
                 $isdir = true;
             }
         } else {
@@ -934,11 +950,11 @@ class PHP_Archive
             } elseif (strpos($file, $path) === 0) {
                 $fname = substr($file, strlen($path) + 1);
                 if (strpos($fname, '/')) {
+                    // this is a directory
                     $a = explode('/', $fname);
                     $this->_dirFiles[array_shift($a)] = true;
-                } elseif (strlen($file) != strlen($path)) {
-                    // if the two match exactly, the path searched for was
-                    // not a directory, but was a file.
+                } elseif ($file[strlen($path)] == '/') {
+                    // this is a file
                     $this->_dirFiles[$fname] = true;
                 }
             }
