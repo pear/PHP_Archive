@@ -418,7 +418,7 @@ require_once \'phar://@ALIAS@/' . addslashes($init_file) . '\';
     {
         $file_contents = preg_replace(
             '/(include|require)(_once)?\s*((?:\'|")[^;]+);/',
-            '$1$2 \'phar://' . $this->alias . '/\' . $3', $contents);
+            '$1$2 \'phar://' . $this->alias . '/\' . $3;', $contents);
         return $file_contents;
     }
 
