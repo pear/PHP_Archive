@@ -420,7 +420,7 @@ class PHP_Archive
         $fp = fopen($file, 'rb');
         // seek to __HALT_COMPILER_OFFSET__
         fseek($fp, $dataoffset);
-        $manifest_length = unpack('V', fread($fp, 4));
+        $manifest_length = unpack('Vlen', fread($fp, 4));
         $manifest = '';
         $last = '1';
         while (strlen($last) && strlen($manifest) < $manifest_length['len']) {
