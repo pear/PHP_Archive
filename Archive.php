@@ -320,12 +320,35 @@ class PHP_Archive
     }
 
     /**
+     * Detect end of stub
+     *
+     * @param string $buffer stub past '__HALT_'.'COMPILER();'
+     * @return end of stub, prior to length of manifest.
+     */
+    private static final function _endOfStubLength($buffer)
+    {
+        $pos = 0;
+        if (($buffer[0] == ' ' || $buffer[0] == "\n") && substr($buffer, 1, 2) == '?>')
+        {
+            $pos += 3;
+            if ($buffer[$pos] == "\r" && $buffer[$pos+1] == "\n") {
+                $pos += 2;
+            }
+            else if ($buffer[$pos] == "\n") {
+                $pos += 1;
+            }
+        }
+        return $pos;
+    }
+
+    /**
      * Allows loading an external Phar archive without include()ing it
      *
-     * @param string $file
+     * @param string $file  phar package to load
+     * @param string $alias alias to use
      * @throws Exception
      */
-    public static final function loadPhar($file)
+    public static final function loadPhar($file, $alias = NULL)
     {
         $file = realpath($file);
         if ($file) {
@@ -335,8 +358,11 @@ class PHP_Archive
                 $buffer .= fread($fp, 8192);
                 // don't break phars
                 if ($pos = strpos($buffer, '__HALT_COMPI' . 'LER();')) {
+                    $buffer .= fread($fp, 5);
                     fclose($fp);
-                    return self::_mapPhar($file, $pos);
+                    $pos += 18;
+                    $pos = self::_endOfStubLength(substr($buffer, $pos));
+                    return self::_mapPhar($file, $pos, $alias);
                 }
             }
             fclose($fp);
@@ -349,22 +375,28 @@ class PHP_Archive
      * This function can only be called from the initialization of the .phar itself.
      * Any attempt to call from outside the .phar or to re-alias the .phar will fail
      * as a security measure.
-     * @param string $file full realpath() filepath, like /path/to/go-pear.phar
-     * @param string $alias alias used in opening a file within the phar
-     *                      like phar://go-pear.phar/file
-     * @param bool $compressed determines whether to attempt zlib uncompression
-     *                         on accessing internal files
+     * @param string $alias
      * @param int $dataoffset the value of __COMPILER_HALT_OFFSET__
      */
-    public static final function mapPhar($file, $dataoffset)
+    public static final function mapPhar($alias = NULL, $dataoffset = NULL)
     {
         try {
+            $file = __FILE__;
             // this ensures that this is safe
             if (!in_array($file, get_included_files())) {
                 die('SECURITY ERROR: PHP_Archive::mapPhar can only be called from within ' .
                     'the phar that initiates it');
             }
-            self::_mapPhar($file, $dataoffset);
+            if (!isset($dataoffset)) {
+                $dataoffset = constant('__COMPILER_HALT_OFFSET'.'__');
+            }
+            $file = realpath($file);
+
+            $fp = fopen($file, 'rb');
+            fseek($fp, $dataoffset, SEEK_SET);
+            $pos = $dataoffset + self::_endOfStubLength(fread($fp, 5));
+            fclose($fp);
+            self::_mapPhar($file, $pos);
         } catch (Exception $e) {
             die($e->getMessage());
         }
@@ -376,7 +408,7 @@ class PHP_Archive
      * @param unknown_type $file
      * @param unknown_type $dataoffset
      */
-    private static function _mapPhar($file, $dataoffset)
+    private static function _mapPhar($file, $dataoffset, $alias = NULL)
     {
         $file = realpath($file);
         if (isset(self::$_manifest[$file])) {
@@ -409,7 +441,9 @@ class PHP_Archive
             $alias = $info['alias'];
             $explicit = true;
         } else {
-            $alias = $file;
+            if (!isset($alias)) {
+                $alias = $file;
+            }
             $explicit = false;
         }
         self::$_manifest[$file] = $info['manifest'];
