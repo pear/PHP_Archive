@@ -361,7 +361,7 @@ class PHP_Archive
                     $buffer .= fread($fp, 5);
                     fclose($fp);
                     $pos += 18;
-                    $pos = self::_endOfStubLength(substr($buffer, $pos));
+                    $pos += self::_endOfStubLength(substr($buffer, $pos));
                     return self::_mapPhar($file, $pos, $alias);
                 }
             }
