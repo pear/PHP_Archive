@@ -485,15 +485,15 @@ class PHP_Archive
         $apiver = bin2hex($apiver);
         $apiver_dots = hexdec($apiver[0]) . '.' . hexdec($apiver[1]) . '.' . hexdec($apiver[2]);
         $majorcompat = hexdec($apiver[0]);
-        $calcapi = explode('.', '@API-VER@');
+        $calcapi = explode('.', self::APIVersion());
         if ($calcapi[0] != $majorcompat) {
             throw new Exception('Phar is incompatible API version ' . $apiver_dots . ', but ' .
-                'PHP_Archive is API version @API-VER@');
+                'PHP_Archive is API version '.self::APIVersion());
         }
         if ($calcapi[0] === '0') {
-            if ('@API-VER@' != $apiver_dots) {
+            if (self::APIVersion() != $apiver_dots) {
                 throw new Exception('Phar is API version ' . $apiver_dots .
-                    ', but PHP_Archive is API version @API-VER@', E_USER_ERROR);
+                    ', but PHP_Archive is API version '.self::APIVersion(), E_USER_ERROR);
             }
         }
         $flags = unpack('V', substr($manifest, 6, 4));
