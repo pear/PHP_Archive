@@ -1090,5 +1090,18 @@ class PHP_Archive
         }
         return self::$_manifest[$phar][$file][6];
     }
+
+    /**
+     * @return list of supported signature algorithmns.
+     */
+    public static function getsupportedsignatures()
+    {
+        $ret = array('MD5', 'SHA-1');
+        if (extension_loaded('hash')) {
+            $ret[] = 'SHA-256';
+            $ret[] = 'SHA-512';
+        }
+        return $ret;
+    }
 }
 ?>
