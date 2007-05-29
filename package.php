@@ -5,7 +5,10 @@ PEAR::setErrorHAndling(PEAR_ERROR_DIE);
 $version = '0.11.0';
 $apiversion = '1.0.0';
 $notes = '
-Add support for introspection (web) and front controller (web)';
+Add support for introspection (web) and front controller (web)
+Synchronize PHP_Archive class mapPhar() and loadPhar() with API of phar extension
+fix url_stat() for non-existing directories/files
+fix ';
 
 
 $package = PEAR_PackageFileManager2::importOptions(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'package.xml',

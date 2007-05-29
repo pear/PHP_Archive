@@ -1,23 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<package packagerversion="1.5.2" version="2.0" xmlns="http://pear.php.net/dtd/package-2.0" xmlns:tasks="http://pear.php.net/dtd/tasks-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0 http://pear.php.net/dtd/tasks-1.0.xsd http://pear.php.net/dtd/package-2.0 http://pear.php.net/dtd/package-2.0.xsd">
+<package packagerversion="1.6.0" version="2.0" xmlns="http://pear.php.net/dtd/package-2.0" xmlns:tasks="http://pear.php.net/dtd/tasks-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0 http://pear.php.net/dtd/tasks-1.0.xsd http://pear.php.net/dtd/package-2.0 http://pear.php.net/dtd/package-2.0.xsd">
  <name>PHP_Archive</name>
  <channel>pear.php.net</channel>
  <summary>Create and Use PHP Archive files</summary>
  <description>PHP_Archive allows you to create a single .phar file containing an entire application.</description>
- <lead>
-  <name>Davey Shafik</name>
-  <user>davey</user>
-  <email>davey@php.net</email>
-  <active>yes</active>
- </lead>
  <lead>
   <name>Greg Beaver</name>
   <user>cellog</user>
   <email>cellog@php.net</email>
   <active>yes</active>
  </lead>
- <date>2007-05-17</date>
- <time>22:48:07</time>
+ <lead>
+  <name>Marcus Boerger</name>
+  <user>helly</user>
+  <email>helly@php.net</email>
+  <active>yes</active>
+ </lead>
+ <lead>
+  <name>Davey Shafik</name>
+  <user>davey</user>
+  <email>davey@php.net</email>
+  <active>no</active>
+ </lead>
+ <date>2007-05-29</date>
+ <time>14:11:47</time>
  <version>
   <release>0.11.0</release>
   <api>1.0.0</api>
@@ -28,7 +34,10 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-Add support for introspection (web) and front controller (web)</notes>
+Add support for introspection (web) and front controller (web)
+Synchronize PHP_Archive class mapPhar() and loadPhar() with API of phar extension
+fix url_stat() for non-existing directories/files
+fix </notes>
  <contents>
   <dir baseinstalldir="PHP" name="/">
    <dir name="Archive">
@@ -122,10 +131,13 @@ Add support for introspection (web) and front controller (web)</notes>
     <release>alpha</release>
     <api>stable</api>
    </stability>
-   <date>2007-05-17</date>
+   <date>2007-05-29</date>
    <license uri="http://www.php.net/license">PHP License</license>
    <notes>
-Add support for introspection (web) and front controller (web)</notes>
+Add support for introspection (web) and front controller (web)
+Synchronize PHP_Archive class mapPhar() and loadPhar() with API of phar extension
+fix url_stat() for non-existing directories/files
+fix </notes>
   </release>
   <release>
    <version>
