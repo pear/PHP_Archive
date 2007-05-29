@@ -165,7 +165,7 @@ if (function_exists('mb_internal_encoding')) {
             $unpack_code .= $contents;
             $unpack_code .= "}
 if (!class_exists('Phar')) {
-    PHP_Archive::mapPhar(__FILE__, __COMPILER_HALT_OFFSET__);
+    PHP_Archive::mapPhar(null, __COMPILER_HALT_OFFSET__);
 } else {
     try {
         Phar::mapPhar();
@@ -317,11 +317,38 @@ require_once \'phar://@ALIAS@/' . addslashes($init_file) . '\';
                         var_export($deny, true) . "\n";
                 }
             }
+            // if Phar extension is present, use the template code instead
+            if (!$defaultmimes) {
+                $defaultmimes = PHP_Archive::$defaultmimes;
+            }
+            if (!$defaultphp) {
+                $defaultphp = PHP_Archive::$defaultphp;
+            }
+            if (!$defaultphps) {
+                $defaultphps = PHP_Archive::$defaultphps;
+            }
+            if (!$deny) {
+                $deny = PHP_Archive::$deny;
+            }
+            $templatefile = '@data_dir@/PHP_Archive/data/phar_frontcontroller.tpl';
+            $template = file_get_contents($templatefile);
+            if (!$template) {
+                throw new PHP_Archive_Exception('Invalid template file "' . $templatefile . '"');
+            }
+            $template = str_replace('@mime@', var_export($defaultmimes, true), $template);
+            $template = str_replace('@php@', var_export($defaultphp, true), $template);
+            $template = str_replace('@phps@', var_export($defaultphps, true), $template);
+            $template = str_replace('@alias@', $this->alias, $template);
+            $template = str_replace('@deny@', var_export($deny, true), $template);
+            $template = str_replace('@initfile@', $this->initFile, $template);
+            
             $contents = str_replace("@ini_set('memory_limit', -1);",
-                "@ini_set('memory_limit', -1);\n{$extra}" .
+                "@ini_set('memory_limit', -1);\n" .
+                'if (extension_loaded(\'phar\')) {' . $template . '} else {' .
+                $extra .
                 "if (!empty(\$_SERVER['REQUEST_URI'])) " .
                 "PHP_Archive::webFrontController('" .
-                addslashes($this->initFile) . "');\n", $contents);
+                addslashes($this->initFile) . "');}\n", $contents);
         }
         file_put_contents($this->temp_path . DIRECTORY_SEPARATOR . 'loader.php',
             $contents);
