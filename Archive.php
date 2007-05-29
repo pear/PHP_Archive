@@ -354,7 +354,7 @@ class PHP_Archive
         if ($file) {
             $fp = fopen($file, 'rb');
             $buffer = '';
-            while (!$found && !feof($fp)) {
+            while (!feof($fp)) {
                 $buffer .= fread($fp, 8192);
                 // don't break phars
                 if ($pos = strpos($buffer, '__HALT_COMPI' . 'LER();')) {
