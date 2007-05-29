@@ -23,9 +23,9 @@
   <active>no</active>
  </lead>
  <date>2007-05-29</date>
- <time>14:11:47</time>
+ <time>15:42:59</time>
  <version>
-  <release>0.11.0</release>
+  <release>0.11.1</release>
   <api>1.0.0</api>
  </version>
  <stability>
@@ -34,10 +34,7 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-Add support for introspection (web) and front controller (web)
-Synchronize PHP_Archive class mapPhar() and loadPhar() with API of phar extension
-fix url_stat() for non-existing directories/files
-fix </notes>
+Remove potential notice in directory rewind()</notes>
  <contents>
   <dir baseinstalldir="PHP" name="/">
    <dir name="Archive">
@@ -124,7 +121,7 @@ fix </notes>
  <changelog>
   <release>
    <version>
-    <release>0.11.0</release>
+    <release>0.11.1</release>
     <api>1.0.0</api>
    </version>
    <stability>
@@ -134,10 +131,23 @@ fix </notes>
    <date>2007-05-29</date>
    <license uri="http://www.php.net/license">PHP License</license>
    <notes>
-Add support for introspection (web) and front controller (web)
+Remove potential notice in directory rewind()</notes>
+  </release>
+  <release>
+   <version>
+    <release>0.11.0</release>
+    <api>1.0.0</api>
+   </version>
+   <stability>
+    <release>alpha</release>
+    <api>stable</api>
+   </stability>
+   <date>2007-05-29</date>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>Add support for introspection (web) and front controller (web)
 Synchronize PHP_Archive class mapPhar() and loadPhar() with API of phar extension
 fix url_stat() for non-existing directories/files
-fix </notes>
+fix</notes>
   </release>
   <release>
    <version>
