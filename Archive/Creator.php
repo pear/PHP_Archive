@@ -263,13 +263,26 @@ require_once \'phar://@ALIAS@/' . addslashes($init_file) . '\';
      * For web-based applications, construct a default front controller
      * that will direct to the correct file within the phar.
      *
-     * @param string $templatefile full path to custom template, or filename of
-     *                             default template, such as "web_frontcontroller_phar.tpl"
-     *                             by default, web_frontcontroller.tpl is used
+     * @param string  $indexfile    relative path to startup index file (defaults to the same file as
+     *                              is used for CLI startup)
+     * @param array   $defaultmimes list of MIME types to use, associative array of
+     *                              extension => mime type. default is
+     *                              from {@link PHP_Archive::$defaultmimes}
+     * @param array   $defaultphp   list of file extensions that should be parsed as PHP. default is
+     *                              from {@link PHP_Archive::$defaultphp}
+     * @param array   $defaultphps  list of file extensions that should be parsed as PHP source. default is
+     *                              from {@link PHP_Archive::$defaultphps}
+     * @param array   $deny         list of files that should be hidden (return a 404 response)
+     *                              Each file should be a valid pcre regular expression like '/.+\.inc$/',
+     *                              which will deny all .inc files from being served.  The default is
+     *                              from {@link PHP_Archive::$deny}
      */
-    public function useDefaultFrontController($defaultmimes = false, $defaultphp = false,
+    public function useDefaultFrontController($indexfile = false, $defaultmimes = false, $defaultphp = false,
                     $defaultphps = false, $deny = false)
     {
+        if (!$indexfile) {
+            $indexfile = $this->initFile;
+        }
         $contents = file_get_contents($this->temp_path . DIRECTORY_SEPARATOR . 'loader.php');
         if ($this->relyOnPhar) {
             if (!$defaultmimes) {
@@ -340,7 +353,7 @@ require_once \'phar://@ALIAS@/' . addslashes($init_file) . '\';
             $template = str_replace('@phps@', var_export($defaultphps, true), $template);
             $template = str_replace('@alias@', $this->alias, $template);
             $template = str_replace('@deny@', var_export($deny, true), $template);
-            $template = str_replace('@initfile@', $this->initFile, $template);
+            $template = str_replace('@initfile@', $indexfile, $template);
             
             $contents = str_replace("@ini_set('memory_limit', -1);",
                 "@ini_set('memory_limit', -1);\n" .
@@ -348,7 +361,7 @@ require_once \'phar://@ALIAS@/' . addslashes($init_file) . '\';
                 $extra .
                 "if (!empty(\$_SERVER['REQUEST_URI'])) " .
                 "PHP_Archive::webFrontController('" .
-                addslashes($this->initFile) . "');}\n", $contents);
+                addslashes($indexfile) . "');}\n", $contents);
         }
         file_put_contents($this->temp_path . DIRECTORY_SEPARATOR . 'loader.php',
             $contents);
