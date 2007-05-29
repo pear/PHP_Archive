@@ -1022,7 +1022,6 @@ class PHP_Archive
     public function dir_closedir()
     {
         $this->_dirFiles = array();
-        reset($this->_dirFiles);
         return true;
     }
 
@@ -1032,7 +1031,7 @@ class PHP_Archive
      */
     public function dir_rewinddir()
     {
-        reset($this->_dirFiles);
+        @reset($this->_dirFiles);
         return true;
     }
 
