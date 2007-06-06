@@ -532,7 +532,8 @@ class PHP_Archive
             // 4 = flags
             // 5 = metadata length
             $ret['manifest'][$savepath] = array_values(unpack('Va/Vb/Vc/Vd/Ve/Vf', substr($manifest, $start, 24)));
-            $ret['manifest'][$savepath][3] = sprintf('%u', $ret['manifest'][$savepath][3]);
+            $ret['manifest'][$savepath][3] = sprintf('%u', $ret['manifest'][$savepath][3]
+                & 0xffffffff);
             if ($ret['manifest'][$savepath][5]) {
                 $ret['manifest'][$savepath][6] = unserialize(substr($manifest, $start + 24,
                     $ret['manifest'][$savepath][5]));
@@ -655,7 +656,7 @@ class PHP_Archive
                     return array("Not valid internal .phar file (size error {$size} != " .
                         $this->currentStat[7] . ")");
                 }
-                if (self::$_manifest[$this->_archiveName][$path][3] != sprintf("%u", crc32($data))) {
+                if (self::$_manifest[$this->_archiveName][$path][3] != sprintf("%u", crc32($data) & 0xffffffff)) {
                     return array("Not valid internal .phar file (checksum error)");
                 }
                 self::$_manifest[$this->_archiveName][$path]['ok'] = true;
