@@ -252,6 +252,8 @@ class PHP_Archive_Manager
             // 4 = flags
             // 5 = metadata length
             $ret[$savepath] = array_values(unpack('Va/Vb/Vc/Vd/Ve/Vf', substr($manifest, 0, 24)));
+            $ret[$savepath][3] = sprintf('%u', $ret[$savepath][3]
+                & 0xffffffff);
             $manifest = substr($manifest, 24);
             if ($ret[$savepath][5]) {
                 if (strlen($manifest) < $ret[$savepath][5]) {
@@ -314,7 +316,7 @@ class PHP_Archive_Manager
                     array('archive' => $this->_archiveName, 'file' => $path, 'expected' => $temp['isize'],
                         'actual' => strlen($data)));
             }
-            if ($temp['crc32'] != crc32($data)) {
+            if ($temp['crc32'] != sprintf("%u", crc32($data) & 0xffffffff)) {
                 $errors[] = new PHP_Archive_ExceptionExtended(
                     PHP_Archive_ExceptionExtended::FILECORRUPTEDCRC,
                     array('archive' => $this->_archiveName, 'file' => $path, 'expected' => $temp['crc32'],
