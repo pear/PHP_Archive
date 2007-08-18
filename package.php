@@ -6,6 +6,7 @@ $version = '0.11.2';
 $apiversion = '1.0.0';
 $notes = '
 major bugfix release
+* fix 64-bit/32-bit compatibility of phars (Brian Shire)
 * fix Bug #11858: seek to SEEK_END fails
 * fix Bug #11859: mapPhar fails for all phars internally loaded
 * fix Bug #11860: missing constant in PHP_Archive_Exception UNKNOWNSIG';
