@@ -4,10 +4,6 @@ Test opendir()-related functionality on a .phar, also is_dir()/is_file()
 --FILE--
 <?php
 require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . 'phpt_test.php.inc';
-if (!class_exists('Phar')) {
-    // support phar extension
-    require_once 'PHP/Archive.php';
-}
 require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . 'opendir' . DIRECTORY_SEPARATOR .
     'opendir.phar';
 $dir = opendir('phar://opendir.phar/');
@@ -34,11 +30,6 @@ $phpunit->assertEquals(array (
     'd' => false,
   ),
   'filenotfound_phar.phpt' => 
-  array (
-    'f' => true,
-    'd' => false,
-  ),
-  'filenotfoundtest.php' => 
   array (
     'f' => true,
     'd' => false,
@@ -88,16 +79,6 @@ $phpunit->assertEquals(array (
     'f' => true,
     'd' => false,
   ),
-  'pearindex.php' => 
-  array (
-    'f' => true,
-    'd' => false,
-  ),
-  'phar.log' => 
-  array (
-    'f' => true,
-    'd' => false,
-  ),
   'phpt_test.php.inc' => 
   array (
     'f' => true,
@@ -123,11 +104,6 @@ $phpunit->assertEquals(array (
     'f' => true,
     'd' => false,
   ),
-  'savetest.php' => 
-  array (
-    'f' => true,
-    'd' => false,
-  ),
   'seek.phpt' => 
   array (
     'f' => true,
@@ -144,26 +120,6 @@ $phpunit->assertEquals(array (
     'd' => false,
   ),
   'streamstat_phar.phpt' => 
-  array (
-    'f' => true,
-    'd' => false,
-  ),
-  'test.php' => 
-  array (
-    'f' => true,
-    'd' => false,
-  ),
-  'test1.php' => 
-  array (
-    'f' => true,
-    'd' => false,
-  ),
-  'test_path.php' => 
-  array (
-    'f' => true,
-    'd' => false,
-  ),
-  'test_require.php' =>
   array (
     'f' => true,
     'd' => false,

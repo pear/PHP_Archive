@@ -23,7 +23,7 @@ if (!class_exists('PHP_Archive')) {/**
  * @author Davey Shafik <davey@synapticmedia.net>
  * @author Greg Beaver <cellog@php.net>
  * @link http://www.synapticmedia.net Synaptic Media
- * @version Id: Archive.php,v 1.35 2007/01/06 21:58:24 cellog Exp $
+ * @version Id: Archive.php,v 1.49 2007/06/06 04:16:10 cellog Exp $
  * @package PHP_Archive
  * @category PHP
  */
@@ -32,6 +32,9 @@ class PHP_Archive
 {
     const GZ = 0x00001000;
     const BZ2 = 0x00002000;
+    const SIG = 0x00010000;
+    const SHA1 = 0x0002;
+    const MD5 = 0x0001;
     /**
      * Whether this archive is compressed with zlib
      *
@@ -118,24 +121,255 @@ class PHP_Archive
      */
     private $_basename;
 
+
+    /**
+     * Default MIME types used for the web front controller
+     *
+     * @var array
+     */
+    public static $defaultmimes = array(
+            'aif' => 'audio/x-aiff',
+            'aiff' => 'audio/x-aiff',
+            'arc' => 'application/octet-stream',
+            'arj' => 'application/octet-stream',
+            'art' => 'image/x-jg',
+            'asf' => 'video/x-ms-asf',
+            'asx' => 'video/x-ms-asf',
+            'avi' => 'video/avi',
+            'bin' => 'application/octet-stream',
+            'bm' => 'image/bmp',
+            'bmp' => 'image/bmp',
+            'bz2' => 'application/x-bzip2',
+            'css' => 'text/css',
+            'doc' => 'application/msword',
+            'dot' => 'application/msword',
+            'dv' => 'video/x-dv',
+            'dvi' => 'application/x-dvi',
+            'eps' => 'application/postscript',
+            'exe' => 'application/octet-stream',
+            'gif' => 'image/gif',
+            'gz' => 'application/x-gzip',
+            'gzip' => 'application/x-gzip',
+            'htm' => 'text/html',
+            'html' => 'text/html',
+            'ico' => 'image/x-icon',
+            'jpe' => 'image/jpeg',
+            'jpg' => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'js' => 'application/x-javascript',
+            'log' => 'text/plain',
+            'mid' => 'audio/x-midi',
+            'mov' => 'video/quicktime',
+            'mp2' => 'audio/mpeg',
+            'mp3' => 'audio/mpeg3',
+            'mpg' => 'audio/mpeg',
+            'pdf' => 'aplication/pdf',
+            'png' => 'image/png',
+            'rtf' => 'application/rtf',
+            'tif' => 'image/tiff',
+            'tiff' => 'image/tiff',
+            'txt' => 'text/plain',
+            'xml' => 'text/xml',
+        );
+
+    public static $defaultphp = array(
+        'php' => true
+        );
+
+    public static $defaultphps = array(
+        'phps' => true
+        );
+
+    public static $deny = array('/.+\.inc$/');
+
+    public static function viewSource($archive, $file)
+    {
+        // security, idea borrowed from PHK
+        if (!file_exists($archive . '.introspect')) {
+            header("HTTP/1.0 404 Not Found");
+            exit;
+        }
+        if (self::_fileExists($archive, $_GET['viewsource'])) {
+            $source = highlight_file('phar://filenotfound.phar/' .
+                $_GET['viewsource'], true);
+            header('Content-Type: text/html');
+            header('Content-Length: ' . strlen($source));
+            echo '<html><head><title>Source of ',
+                htmlspecialchars($_GET['viewsource']), '</title></head>';
+            echo '<body><h1>Source of ',
+                htmlspecialchars($_GET['viewsource']), '</h1>';
+            if (isset($_GET['introspect'])) {
+                echo '<a href="', htmlspecialchars($_SERVER['PHP_SELF']),
+                    '?introspect=', urlencode(htmlspecialchars($_GET['introspect'])),
+                    '">Return to ', htmlspecialchars($_GET['introspect']), '</a><br />';
+            }
+            echo $source;
+            exit;
+        } else {
+            header("HTTP/1.0 404 Not Found");
+            exit;
+        }
+        
+    }
+
+    public static function introspect($archive, $dir)
+    {
+        // security, idea borrowed from PHK
+        if (!file_exists($archive . '.introspect')) {
+            header("HTTP/1.0 404 Not Found");
+            exit;
+        }
+        if (!$dir) {
+            $dir = '/';
+        }
+        $dir = self::processFile($dir);
+        if ($dir[0] != '/') {
+            $dir = '/' . $dir;
+        }
+        try {
+            $self = htmlspecialchars($_SERVER['PHP_SELF']);
+            $iterate = new DirectoryIterator('phar://filenotfound.phar' . $dir);
+            echo '<html><head><title>Introspect ', htmlspecialchars($dir),
+                '</title></head><body><h1>Introspect ', htmlspecialchars($dir),
+                '</h1><ul>';
+            if ($dir != '/') {
+                echo '<li><a href="', $self, '?introspect=',
+                    htmlspecialchars(dirname($dir)), '">..</a></li>';
+            }
+            foreach ($iterate as $entry) {
+                if ($entry->isDot()) continue;
+                $name = self::processFile($entry->getPathname());
+                $name = str_replace('phar://filenotfound.phar/', '', $name);
+                if ($entry->isDir()) {
+                    echo '<li><a href="', $self, '?introspect=',
+                        urlencode(htmlspecialchars($name)),
+                        '">',
+                        htmlspecialchars($entry->getFilename()), '/</a> [directory]</li>';
+                } else {
+                    echo '<li><a href="', $self, '?introspect=',
+                        urlencode(htmlspecialchars($dir)), '&viewsource=',
+                        urlencode(htmlspecialchars($name)),
+                        '">',
+                        htmlspecialchars($entry->getFilename()), '</a></li>';
+                }
+            }
+            exit;
+        } catch (Exception $e) {
+            echo '<html><head><title>Directory not found: ',
+                htmlspecialchars($dir), '</title></head>',
+                '<body><h1>Directory not found: ', htmlspecialchars($dir), '</h1>',
+                '<p>Try <a href="', htmlspecialchars($_SERVER['PHP_SELF']), '?introspect=/">',
+                'This link</a></p></body></html>';
+            exit;
+        }
+    }
+
+    public static function webFrontController($initfile)
+    {
+        if (isset($_SERVER) && isset($_SERVER['REQUEST_URI'])) {
+            $uri = parse_url($_SERVER['REQUEST_URI']);
+            $archive = realpath($_SERVER['SCRIPT_FILENAME']);
+            $subpath = str_replace('/' . basename($archive), '', $uri['path']);
+            if (!$subpath || $subpath == '/') {
+                if (isset($_GET['viewsource'])) {
+                    self::viewSource($archive, $_GET['viewsource']);
+                }
+                if (isset($_GET['introspect'])) {
+                    self::introspect($archive, $_GET['introspect']);
+                }
+                $subpath = '/' . $initfile;
+            }
+            if (!self::_fileExists($archive, substr($subpath, 1))) {
+                header("HTTP/1.0 404 Not Found");
+                exit;
+            }
+            foreach (self::$deny as $pattern) {
+                if (preg_match($pattern, $subpath)) {
+                    header("HTTP/1.0 404 Not Found");
+                    exit;
+                }
+            }
+            $inf = pathinfo(basename($subpath));
+            if (!isset($inf['extension'])) {
+                header('Content-Type: text/plain');
+                header('Content-Length: ' .
+                    self::_filesize($archive, substr($subpath, 1)));
+                readfile('phar://filenotfound.phar' . $subpath);
+                exit;
+            }
+            if (isset(self::$defaultphp[$inf['extension']])) {
+                include 'phar://filenotfound.phar' . $subpath;
+                exit;
+            }
+            if (isset(self::$defaultmimes[$inf['extension']])) {
+                header('Content-Type: ' . self::$defaultmimes[$inf['extension']]);
+                header('Content-Length: ' .
+                    self::_filesize($archive, substr($subpath, 1)));
+                readfile('phar://filenotfound.phar' . $subpath);
+                exit;
+            }
+            if (isset(self::$defaultphps[$inf['extension']])) {
+                header('Content-Type: text/html');
+                $c = highlight_file('phar://filenotfound.phar' . $subpath, true);
+                header('Content-Length: ' . strlen($c));
+                echo $c;
+                exit;
+            }
+            header('Content-Type: text/plain');
+            header('Content-Length: ' .
+                    self::_filesize($archive, substr($subpath, 1)));
+            readfile('phar://filenotfound.phar' . $subpath);
+            exit;
+        }
+    }
+
+    /**
+     * Detect end of stub
+     *
+     * @param string $buffer stub past '__HALT_'.'COMPILER();'
+     * @return end of stub, prior to length of manifest.
+     */
+    private static final function _endOfStubLength($buffer)
+    {
+        $pos = 0;
+        if (!strlen($buffer)) {
+            return $pos;
+        }
+        if (($buffer[0] == ' ' || $buffer[0] == "\n") && @substr($buffer, 1, 2) == '')
+        {
+            $pos += 3;
+            if ($buffer[$pos] == "\r" && $buffer[$pos+1] == "\n") {
+                $pos += 2;
+            }
+            else if ($buffer[$pos] == "\n") {
+                $pos += 1;
+            }
+        }
+        return $pos;
+    }
+
     /**
      * Allows loading an external Phar archive without include()ing it
      *
-     * @param string $file
+     * @param string $file  phar package to load
+     * @param string $alias alias to use
      * @throws Exception
      */
-    public static final function loadPhar($file)
+    public static final function loadPhar($file, $alias = NULL)
     {
         $file = realpath($file);
         if ($file) {
             $fp = fopen($file, 'rb');
             $buffer = '';
-            while (!$found && !feof($fp)) {
+            while (!feof($fp)) {
                 $buffer .= fread($fp, 8192);
                 // don't break phars
                 if ($pos = strpos($buffer, '__HALT_COMPI' . 'LER();')) {
+                    $buffer .= fread($fp, 5);
                     fclose($fp);
-                    return self::_mapPhar($file, $pos);
+                    $pos += 18;
+                    $pos += self::_endOfStubLength(substr($buffer, $pos));
+                    return self::_mapPhar($file, $pos, $alias);
                 }
             }
             fclose($fp);
@@ -148,21 +382,27 @@ class PHP_Archive
      * This function can only be called from the initialization of the .phar itself.
      * Any attempt to call from outside the .phar or to re-alias the .phar will fail
      * as a security measure.
-     * @param string $file full realpath() filepath, like /path/to/go-pear.phar
-     * @param string $alias alias used in opening a file within the phar
-     *                      like phar://go-pear.phar/file
-     * @param bool $compressed determines whether to attempt zlib uncompression
-     *                         on accessing internal files
-     * @param int $dataoffset the value of __COMPILER_HALT_OFFSET__
+     * @param string $alias
+     * @param int $dataoffset the value of 38894                   
      */
-    public static final function mapPhar($file, $dataoffset)
+    public static final function mapPhar($alias = NULL, $dataoffset = NULL)
     {
         try {
+            $file = __FILE__;
             // this ensures that this is safe
             if (!in_array($file, get_included_files())) {
                 die('SECURITY ERROR: PHP_Archive::mapPhar can only be called from within ' .
                     'the phar that initiates it');
             }
+            $file = realpath($file);
+            if (!isset($dataoffset)) {
+                $dataoffset = constant('__COMPILER_HALT_OFFSET'.'__');
+                $fp = fopen($file, 'rb');
+                fseek($fp, $dataoffset, SEEK_SET);
+                $dataoffset = $dataoffset + self::_endOfStubLength(fread($fp, 5));
+                fclose($fp);
+            }
+
             self::_mapPhar($file, $dataoffset);
         } catch (Exception $e) {
             die($e->getMessage());
@@ -175,7 +415,7 @@ class PHP_Archive
      * @param unknown_type $file
      * @param unknown_type $dataoffset
      */
-    private static function _mapPhar($file, $dataoffset)
+    private static function _mapPhar($file, $dataoffset, $alias = NULL)
     {
         $file = realpath($file);
         if (isset(self::$_manifest[$file])) {
@@ -208,7 +448,9 @@ class PHP_Archive
             $alias = $info['alias'];
             $explicit = true;
         } else {
-            $alias = $file;
+            if (!isset($alias)) {
+                $alias = $file;
+            }
             $explicit = false;
         }
         self::$_manifest[$file] = $info['manifest'];
@@ -231,7 +473,8 @@ class PHP_Archive
             throw new Exception('ERROR: PHP_Archive::mapPhar has already been called for alias "' .
                 $alias . '" cannot re-alias to "' . $file . '"');
         }
-        self::$_pharMapping[$alias] = array($file, $compressed, $dataoffset, $explicit);
+        self::$_pharMapping[$alias] = array($file, $compressed, $dataoffset, $explicit,
+            $info['metadata']);
         self::$_pharFiles[$file] = $alias;
     }
 
@@ -249,15 +492,15 @@ class PHP_Archive
         $apiver = bin2hex($apiver);
         $apiver_dots = hexdec($apiver[0]) . '.' . hexdec($apiver[1]) . '.' . hexdec($apiver[2]);
         $majorcompat = hexdec($apiver[0]);
-        $calcapi = explode('.', '1.0.0');
+        $calcapi = explode('.', self::APIVersion());
         if ($calcapi[0] != $majorcompat) {
             throw new Exception('Phar is incompatible API version ' . $apiver_dots . ', but ' .
-                'PHP_Archive is API version 1.0.0');
+                'PHP_Archive is API version '.self::APIVersion());
         }
         if ($calcapi[0] === '0') {
-            if ('1.0.0' != $apiver_dots) {
+            if (self::APIVersion() != $apiver_dots) {
                 throw new Exception('Phar is API version ' . $apiver_dots .
-                    ', but PHP_Archive is API version 1.0.0', E_USER_ERROR);
+                    ', but PHP_Archive is API version '.self::APIVersion(), E_USER_ERROR);
             }
         }
         $flags = unpack('V', substr($manifest, 6, 4));
@@ -296,7 +539,8 @@ class PHP_Archive
             // 4 = flags
             // 5 = metadata length
             $ret['manifest'][$savepath] = array_values(unpack('Va/Vb/Vc/Vd/Ve/Vf', substr($manifest, $start, 24)));
-            $ret['manifest'][$savepath][3] = sprintf('%u', $ret['manifest'][$savepath][3]);
+            $ret['manifest'][$savepath][3] = sprintf('%u', $ret['manifest'][$savepath][3]
+                & 0xffffffff);
             if ($ret['manifest'][$savepath][5]) {
                 $ret['manifest'][$savepath][6] = unserialize(substr($manifest, $start + 24,
                     $ret['manifest'][$savepath][5]));
@@ -373,6 +617,17 @@ class PHP_Archive
         }
     }
 
+    private static function _fileExists($archive, $path)
+    {
+        return isset(self::$_manifest[$archive]) &&
+            isset(self::$_manifest[$archive][$path]);
+    }
+
+    private static function _filesize($archive, $path)
+    {
+        return self::$_manifest[$archive][$path][0];
+    }
+
     /**
      * Seek to a file within the master archive, and extract its contents
      * @param string
@@ -408,7 +663,7 @@ class PHP_Archive
                     return array("Not valid internal .phar file (size error {$size} != " .
                         $this->currentStat[7] . ")");
                 }
-                if (self::$_manifest[$this->_archiveName][$path][3] != sprintf("%u", crc32($data))) {
+                if (self::$_manifest[$this->_archiveName][$path][3] != sprintf("%u", crc32($data) & 0xffffffff)) {
                     return array("Not valid internal .phar file (checksum error)");
                 }
                 self::$_manifest[$this->_archiveName][$path]['ok'] = true;
@@ -471,6 +726,7 @@ class PHP_Archive
      */
     public function initializeStream($file)
     {
+        $file = self::processFile($file);
         $info = @parse_url($file);
         if (!$info) {
             $info = self::parseUrl($file);
@@ -604,6 +860,7 @@ class PHP_Archive
                     return false;
                 }
                 $this->position = $pos + $this->currentStat[7];
+                break;
             default:
                 return false;
         }
@@ -643,6 +900,22 @@ class PHP_Archive
                 $this->_setCurrentFile($file);
                 $isdir = false;
             } else {
+                do {
+                    $isdir = false;
+                    if ($file == '/') {
+                        break;
+                    }
+                    foreach (self::$_manifest[$this->_archiveName] as $path => $info) {
+                        if (strpos($path, $file) === 0) {
+                            if (strlen($path) > strlen($file) &&
+                                  $path[strlen($file)] == '/') {
+                                break 2;
+                            }
+                        }
+                    }
+                    // no files exist and no directories match this string
+                    return false;
+                } while (false);
                 $isdir = true;
             }
         } else {
@@ -720,16 +993,19 @@ class PHP_Archive
             } elseif (strpos($file, $path) === 0) {
                 $fname = substr($file, strlen($path) + 1);
                 if (strpos($fname, '/')) {
+                    // this is a directory
                     $a = explode('/', $fname);
                     $this->_dirFiles[array_shift($a)] = true;
-                } elseif (strlen($file) != strlen($path)) {
-                    // if the two match exactly, the path searched for was
-                    // not a directory, but was a file.
+                } elseif ($file[strlen($path)] == '/') {
+                    // this is a file
                     $this->_dirFiles[$fname] = true;
                 }
             }
         }
         @fclose($this->fp);
+        if (!count($this->_dirFiles)) {
+            return false;
+        }
         @uksort($this->_dirFiles, 'strnatcmp');
         return true;
     }
@@ -755,7 +1031,6 @@ class PHP_Archive
     public function dir_closedir()
     {
         $this->_dirFiles = array();
-        reset($this->_dirFiles);
         return true;
     }
 
@@ -765,7 +1040,7 @@ class PHP_Archive
      */
     public function dir_rewinddir()
     {
-        reset($this->_dirFiles);
+        @reset($this->_dirFiles);
         return true;
     }
 
@@ -777,9 +1052,68 @@ class PHP_Archive
     {
         return '1.0.0';
     }
+
+    /**
+     * Retrieve Phar-specific metadata for a Phar archive
+     *
+     * @param string $phar full path to Phar archive, or alias
+     * @return null|mixed The value that was serialized for the Phar
+     *                    archive's metadata
+     * @throws Exception
+     */
+    public static function getPharMetadata($phar)
+    {
+        if (isset(self::$_pharFiles[$phar])) {
+            $phar = self::$_pharFiles[$phar];
+        }
+        if (!isset(self::$_pharMapping[$phar])) {
+            throw new Exception('Unknown Phar archive: "' . $phar . '"');
+        }
+        return self::$_pharMapping[$phar][4];
+    }
+
+    /**
+     * Retrieve File-specific metadata for a Phar archive file
+     *
+     * @param string $phar full path to Phar archive, or alias
+     * @param string $file relative path to file within Phar archive
+     * @return null|mixed The value that was serialized for the Phar
+     *                    archive's metadata
+     * @throws Exception
+     */
+    public static function getFileMetadata($phar, $file)
+    {
+        if (!isset(self::$_pharFiles[$phar])) {
+            if (!isset(self::$_pharMapping[$phar])) {
+                throw new Exception('Unknown Phar archive: "' . $phar . '"');
+            }
+            $phar = self::$_pharMapping[$phar][0];
+        }
+        if (!isset(self::$_manifest[$phar])) {
+            throw new Exception('Unknown Phar: "' . $phar . '"');
+        }
+        $file = self::processFile($file);
+        if (!isset(self::$_manifest[$phar][$file])) {
+            throw new Exception('Unknown file "' . $file . '" within Phar "'. $phar . '"');
+        }
+        return self::$_manifest[$phar][$file][6];
+    }
+
+    /**
+     * @return list of supported signature algorithmns.
+     */
+    public static function getsupportedsignatures()
+    {
+        $ret = array('MD5', 'SHA-1');
+        if (extension_loaded('hash')) {
+            $ret[] = 'SHA-256';
+            $ret[] = 'SHA-512';
+        }
+        return $ret;
+    }
 }}
 if (!class_exists('Phar')) {
-    PHP_Archive::mapPhar(__FILE__, __COMPILER_HALT_OFFSET__);
+    PHP_Archive::mapPhar(null, 38894                   );
 } else {
     try {
         Phar::mapPhar();
@@ -790,9 +1124,11 @@ if (!class_exists('Phar')) {
 if (class_exists('PHP_Archive') && !in_array('phar', stream_get_wrappers())) {
     stream_wrapper_register('phar', 'PHP_Archive');
 }
+
 @ini_set('memory_limit', -1);
 
+
 require_once 'phar://filenotfound.phar/index.php';
-__HALT_COMPILER();H              filenotfound.phar    	   index.php:   …öÇE:   ·­s        <?php
+__HALT_COMPILER();H              filenotfound.phar    	   index.php:   j|ÆF:   ·­sm      <?php
 fopen('phar://filenotfound.phar/test2.php', 'r');
 ?>

@@ -23,7 +23,7 @@ if (!class_exists('PHP_Archive')) {/**
  * @author Davey Shafik <davey@synapticmedia.net>
  * @author Greg Beaver <cellog@php.net>
  * @link http://www.synapticmedia.net Synaptic Media
- * @version Id: Archive.php,v 1.35 2007/01/06 21:58:24 cellog Exp $
+ * @version Id: Archive.php,v 1.49 2007/06/06 04:16:10 cellog Exp $
  * @package PHP_Archive
  * @category PHP
  */
@@ -32,6 +32,9 @@ class PHP_Archive
 {
     const GZ = 0x00001000;
     const BZ2 = 0x00002000;
+    const SIG = 0x00010000;
+    const SHA1 = 0x0002;
+    const MD5 = 0x0001;
     /**
      * Whether this archive is compressed with zlib
      *
@@ -118,24 +121,255 @@ class PHP_Archive
      */
     private $_basename;
 
+
+    /**
+     * Default MIME types used for the web front controller
+     *
+     * @var array
+     */
+    public static $defaultmimes = array(
+            'aif' => 'audio/x-aiff',
+            'aiff' => 'audio/x-aiff',
+            'arc' => 'application/octet-stream',
+            'arj' => 'application/octet-stream',
+            'art' => 'image/x-jg',
+            'asf' => 'video/x-ms-asf',
+            'asx' => 'video/x-ms-asf',
+            'avi' => 'video/avi',
+            'bin' => 'application/octet-stream',
+            'bm' => 'image/bmp',
+            'bmp' => 'image/bmp',
+            'bz2' => 'application/x-bzip2',
+            'css' => 'text/css',
+            'doc' => 'application/msword',
+            'dot' => 'application/msword',
+            'dv' => 'video/x-dv',
+            'dvi' => 'application/x-dvi',
+            'eps' => 'application/postscript',
+            'exe' => 'application/octet-stream',
+            'gif' => 'image/gif',
+            'gz' => 'application/x-gzip',
+            'gzip' => 'application/x-gzip',
+            'htm' => 'text/html',
+            'html' => 'text/html',
+            'ico' => 'image/x-icon',
+            'jpe' => 'image/jpeg',
+            'jpg' => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'js' => 'application/x-javascript',
+            'log' => 'text/plain',
+            'mid' => 'audio/x-midi',
+            'mov' => 'video/quicktime',
+            'mp2' => 'audio/mpeg',
+            'mp3' => 'audio/mpeg3',
+            'mpg' => 'audio/mpeg',
+            'pdf' => 'aplication/pdf',
+            'png' => 'image/png',
+            'rtf' => 'application/rtf',
+            'tif' => 'image/tiff',
+            'tiff' => 'image/tiff',
+            'txt' => 'text/plain',
+            'xml' => 'text/xml',
+        );
+
+    public static $defaultphp = array(
+        'php' => true
+        );
+
+    public static $defaultphps = array(
+        'phps' => true
+        );
+
+    public static $deny = array('/.+\.inc$/');
+
+    public static function viewSource($archive, $file)
+    {
+        // security, idea borrowed from PHK
+        if (!file_exists($archive . '.introspect')) {
+            header("HTTP/1.0 404 Not Found");
+            exit;
+        }
+        if (self::_fileExists($archive, $_GET['viewsource'])) {
+            $source = highlight_file('phar://opendir.phar/' .
+                $_GET['viewsource'], true);
+            header('Content-Type: text/html');
+            header('Content-Length: ' . strlen($source));
+            echo '<html><head><title>Source of ',
+                htmlspecialchars($_GET['viewsource']), '</title></head>';
+            echo '<body><h1>Source of ',
+                htmlspecialchars($_GET['viewsource']), '</h1>';
+            if (isset($_GET['introspect'])) {
+                echo '<a href="', htmlspecialchars($_SERVER['PHP_SELF']),
+                    '?introspect=', urlencode(htmlspecialchars($_GET['introspect'])),
+                    '">Return to ', htmlspecialchars($_GET['introspect']), '</a><br />';
+            }
+            echo $source;
+            exit;
+        } else {
+            header("HTTP/1.0 404 Not Found");
+            exit;
+        }
+        
+    }
+
+    public static function introspect($archive, $dir)
+    {
+        // security, idea borrowed from PHK
+        if (!file_exists($archive . '.introspect')) {
+            header("HTTP/1.0 404 Not Found");
+            exit;
+        }
+        if (!$dir) {
+            $dir = '/';
+        }
+        $dir = self::processFile($dir);
+        if ($dir[0] != '/') {
+            $dir = '/' . $dir;
+        }
+        try {
+            $self = htmlspecialchars($_SERVER['PHP_SELF']);
+            $iterate = new DirectoryIterator('phar://opendir.phar' . $dir);
+            echo '<html><head><title>Introspect ', htmlspecialchars($dir),
+                '</title></head><body><h1>Introspect ', htmlspecialchars($dir),
+                '</h1><ul>';
+            if ($dir != '/') {
+                echo '<li><a href="', $self, '?introspect=',
+                    htmlspecialchars(dirname($dir)), '">..</a></li>';
+            }
+            foreach ($iterate as $entry) {
+                if ($entry->isDot()) continue;
+                $name = self::processFile($entry->getPathname());
+                $name = str_replace('phar://opendir.phar/', '', $name);
+                if ($entry->isDir()) {
+                    echo '<li><a href="', $self, '?introspect=',
+                        urlencode(htmlspecialchars($name)),
+                        '">',
+                        htmlspecialchars($entry->getFilename()), '/</a> [directory]</li>';
+                } else {
+                    echo '<li><a href="', $self, '?introspect=',
+                        urlencode(htmlspecialchars($dir)), '&viewsource=',
+                        urlencode(htmlspecialchars($name)),
+                        '">',
+                        htmlspecialchars($entry->getFilename()), '</a></li>';
+                }
+            }
+            exit;
+        } catch (Exception $e) {
+            echo '<html><head><title>Directory not found: ',
+                htmlspecialchars($dir), '</title></head>',
+                '<body><h1>Directory not found: ', htmlspecialchars($dir), '</h1>',
+                '<p>Try <a href="', htmlspecialchars($_SERVER['PHP_SELF']), '?introspect=/">',
+                'This link</a></p></body></html>';
+            exit;
+        }
+    }
+
+    public static function webFrontController($initfile)
+    {
+        if (isset($_SERVER) && isset($_SERVER['REQUEST_URI'])) {
+            $uri = parse_url($_SERVER['REQUEST_URI']);
+            $archive = realpath($_SERVER['SCRIPT_FILENAME']);
+            $subpath = str_replace('/' . basename($archive), '', $uri['path']);
+            if (!$subpath || $subpath == '/') {
+                if (isset($_GET['viewsource'])) {
+                    self::viewSource($archive, $_GET['viewsource']);
+                }
+                if (isset($_GET['introspect'])) {
+                    self::introspect($archive, $_GET['introspect']);
+                }
+                $subpath = '/' . $initfile;
+            }
+            if (!self::_fileExists($archive, substr($subpath, 1))) {
+                header("HTTP/1.0 404 Not Found");
+                exit;
+            }
+            foreach (self::$deny as $pattern) {
+                if (preg_match($pattern, $subpath)) {
+                    header("HTTP/1.0 404 Not Found");
+                    exit;
+                }
+            }
+            $inf = pathinfo(basename($subpath));
+            if (!isset($inf['extension'])) {
+                header('Content-Type: text/plain');
+                header('Content-Length: ' .
+                    self::_filesize($archive, substr($subpath, 1)));
+                readfile('phar://opendir.phar' . $subpath);
+                exit;
+            }
+            if (isset(self::$defaultphp[$inf['extension']])) {
+                include 'phar://opendir.phar' . $subpath;
+                exit;
+            }
+            if (isset(self::$defaultmimes[$inf['extension']])) {
+                header('Content-Type: ' . self::$defaultmimes[$inf['extension']]);
+                header('Content-Length: ' .
+                    self::_filesize($archive, substr($subpath, 1)));
+                readfile('phar://opendir.phar' . $subpath);
+                exit;
+            }
+            if (isset(self::$defaultphps[$inf['extension']])) {
+                header('Content-Type: text/html');
+                $c = highlight_file('phar://opendir.phar' . $subpath, true);
+                header('Content-Length: ' . strlen($c));
+                echo $c;
+                exit;
+            }
+            header('Content-Type: text/plain');
+            header('Content-Length: ' .
+                    self::_filesize($archive, substr($subpath, 1)));
+            readfile('phar://opendir.phar' . $subpath);
+            exit;
+        }
+    }
+
+    /**
+     * Detect end of stub
+     *
+     * @param string $buffer stub past '__HALT_'.'COMPILER();'
+     * @return end of stub, prior to length of manifest.
+     */
+    private static final function _endOfStubLength($buffer)
+    {
+        $pos = 0;
+        if (!strlen($buffer)) {
+            return $pos;
+        }
+        if (($buffer[0] == ' ' || $buffer[0] == "\n") && @substr($buffer, 1, 2) == '')
+        {
+            $pos += 3;
+            if ($buffer[$pos] == "\r" && $buffer[$pos+1] == "\n") {
+                $pos += 2;
+            }
+            else if ($buffer[$pos] == "\n") {
+                $pos += 1;
+            }
+        }
+        return $pos;
+    }
+
     /**
      * Allows loading an external Phar archive without include()ing it
      *
-     * @param string $file
+     * @param string $file  phar package to load
+     * @param string $alias alias to use
      * @throws Exception
      */
-    public static final function loadPhar($file)
+    public static final function loadPhar($file, $alias = NULL)
     {
         $file = realpath($file);
         if ($file) {
             $fp = fopen($file, 'rb');
             $buffer = '';
-            while (!$found && !feof($fp)) {
+            while (!feof($fp)) {
                 $buffer .= fread($fp, 8192);
                 // don't break phars
                 if ($pos = strpos($buffer, '__HALT_COMPI' . 'LER();')) {
+                    $buffer .= fread($fp, 5);
                     fclose($fp);
-                    return self::_mapPhar($file, $pos);
+                    $pos += 18;
+                    $pos += self::_endOfStubLength(substr($buffer, $pos));
+                    return self::_mapPhar($file, $pos, $alias);
                 }
             }
             fclose($fp);
@@ -148,21 +382,27 @@ class PHP_Archive
      * This function can only be called from the initialization of the .phar itself.
      * Any attempt to call from outside the .phar or to re-alias the .phar will fail
      * as a security measure.
-     * @param string $file full realpath() filepath, like /path/to/go-pear.phar
-     * @param string $alias alias used in opening a file within the phar
-     *                      like phar://go-pear.phar/file
-     * @param bool $compressed determines whether to attempt zlib uncompression
-     *                         on accessing internal files
-     * @param int $dataoffset the value of __COMPILER_HALT_OFFSET__
+     * @param string $alias
+     * @param int $dataoffset the value of 38854                   
      */
-    public static final function mapPhar($file, $dataoffset)
+    public static final function mapPhar($alias = NULL, $dataoffset = NULL)
     {
         try {
+            $file = __FILE__;
             // this ensures that this is safe
             if (!in_array($file, get_included_files())) {
                 die('SECURITY ERROR: PHP_Archive::mapPhar can only be called from within ' .
                     'the phar that initiates it');
             }
+            $file = realpath($file);
+            if (!isset($dataoffset)) {
+                $dataoffset = constant('__COMPILER_HALT_OFFSET'.'__');
+                $fp = fopen($file, 'rb');
+                fseek($fp, $dataoffset, SEEK_SET);
+                $dataoffset = $dataoffset + self::_endOfStubLength(fread($fp, 5));
+                fclose($fp);
+            }
+
             self::_mapPhar($file, $dataoffset);
         } catch (Exception $e) {
             die($e->getMessage());
@@ -175,7 +415,7 @@ class PHP_Archive
      * @param unknown_type $file
      * @param unknown_type $dataoffset
      */
-    private static function _mapPhar($file, $dataoffset)
+    private static function _mapPhar($file, $dataoffset, $alias = NULL)
     {
         $file = realpath($file);
         if (isset(self::$_manifest[$file])) {
@@ -208,7 +448,9 @@ class PHP_Archive
             $alias = $info['alias'];
             $explicit = true;
         } else {
-            $alias = $file;
+            if (!isset($alias)) {
+                $alias = $file;
+            }
             $explicit = false;
         }
         self::$_manifest[$file] = $info['manifest'];
@@ -231,7 +473,8 @@ class PHP_Archive
             throw new Exception('ERROR: PHP_Archive::mapPhar has already been called for alias "' .
                 $alias . '" cannot re-alias to "' . $file . '"');
         }
-        self::$_pharMapping[$alias] = array($file, $compressed, $dataoffset, $explicit);
+        self::$_pharMapping[$alias] = array($file, $compressed, $dataoffset, $explicit,
+            $info['metadata']);
         self::$_pharFiles[$file] = $alias;
     }
 
@@ -249,15 +492,15 @@ class PHP_Archive
         $apiver = bin2hex($apiver);
         $apiver_dots = hexdec($apiver[0]) . '.' . hexdec($apiver[1]) . '.' . hexdec($apiver[2]);
         $majorcompat = hexdec($apiver[0]);
-        $calcapi = explode('.', '1.0.0');
+        $calcapi = explode('.', self::APIVersion());
         if ($calcapi[0] != $majorcompat) {
             throw new Exception('Phar is incompatible API version ' . $apiver_dots . ', but ' .
-                'PHP_Archive is API version 1.0.0');
+                'PHP_Archive is API version '.self::APIVersion());
         }
         if ($calcapi[0] === '0') {
-            if ('1.0.0' != $apiver_dots) {
+            if (self::APIVersion() != $apiver_dots) {
                 throw new Exception('Phar is API version ' . $apiver_dots .
-                    ', but PHP_Archive is API version 1.0.0', E_USER_ERROR);
+                    ', but PHP_Archive is API version '.self::APIVersion(), E_USER_ERROR);
             }
         }
         $flags = unpack('V', substr($manifest, 6, 4));
@@ -296,7 +539,8 @@ class PHP_Archive
             // 4 = flags
             // 5 = metadata length
             $ret['manifest'][$savepath] = array_values(unpack('Va/Vb/Vc/Vd/Ve/Vf', substr($manifest, $start, 24)));
-            $ret['manifest'][$savepath][3] = sprintf('%u', $ret['manifest'][$savepath][3]);
+            $ret['manifest'][$savepath][3] = sprintf('%u', $ret['manifest'][$savepath][3]
+                & 0xffffffff);
             if ($ret['manifest'][$savepath][5]) {
                 $ret['manifest'][$savepath][6] = unserialize(substr($manifest, $start + 24,
                     $ret['manifest'][$savepath][5]));
@@ -373,6 +617,17 @@ class PHP_Archive
         }
     }
 
+    private static function _fileExists($archive, $path)
+    {
+        return isset(self::$_manifest[$archive]) &&
+            isset(self::$_manifest[$archive][$path]);
+    }
+
+    private static function _filesize($archive, $path)
+    {
+        return self::$_manifest[$archive][$path][0];
+    }
+
     /**
      * Seek to a file within the master archive, and extract its contents
      * @param string
@@ -408,7 +663,7 @@ class PHP_Archive
                     return array("Not valid internal .phar file (size error {$size} != " .
                         $this->currentStat[7] . ")");
                 }
-                if (self::$_manifest[$this->_archiveName][$path][3] != sprintf("%u", crc32($data))) {
+                if (self::$_manifest[$this->_archiveName][$path][3] != sprintf("%u", crc32($data) & 0xffffffff)) {
                     return array("Not valid internal .phar file (checksum error)");
                 }
                 self::$_manifest[$this->_archiveName][$path]['ok'] = true;
@@ -471,6 +726,7 @@ class PHP_Archive
      */
     public function initializeStream($file)
     {
+        $file = self::processFile($file);
         $info = @parse_url($file);
         if (!$info) {
             $info = self::parseUrl($file);
@@ -604,6 +860,7 @@ class PHP_Archive
                     return false;
                 }
                 $this->position = $pos + $this->currentStat[7];
+                break;
             default:
                 return false;
         }
@@ -643,6 +900,22 @@ class PHP_Archive
                 $this->_setCurrentFile($file);
                 $isdir = false;
             } else {
+                do {
+                    $isdir = false;
+                    if ($file == '/') {
+                        break;
+                    }
+                    foreach (self::$_manifest[$this->_archiveName] as $path => $info) {
+                        if (strpos($path, $file) === 0) {
+                            if (strlen($path) > strlen($file) &&
+                                  $path[strlen($file)] == '/') {
+                                break 2;
+                            }
+                        }
+                    }
+                    // no files exist and no directories match this string
+                    return false;
+                } while (false);
                 $isdir = true;
             }
         } else {
@@ -720,16 +993,19 @@ class PHP_Archive
             } elseif (strpos($file, $path) === 0) {
                 $fname = substr($file, strlen($path) + 1);
                 if (strpos($fname, '/')) {
+                    // this is a directory
                     $a = explode('/', $fname);
                     $this->_dirFiles[array_shift($a)] = true;
-                } elseif (strlen($file) != strlen($path)) {
-                    // if the two match exactly, the path searched for was
-                    // not a directory, but was a file.
+                } elseif ($file[strlen($path)] == '/') {
+                    // this is a file
                     $this->_dirFiles[$fname] = true;
                 }
             }
         }
         @fclose($this->fp);
+        if (!count($this->_dirFiles)) {
+            return false;
+        }
         @uksort($this->_dirFiles, 'strnatcmp');
         return true;
     }
@@ -755,7 +1031,6 @@ class PHP_Archive
     public function dir_closedir()
     {
         $this->_dirFiles = array();
-        reset($this->_dirFiles);
         return true;
     }
 
@@ -765,7 +1040,7 @@ class PHP_Archive
      */
     public function dir_rewinddir()
     {
-        reset($this->_dirFiles);
+        @reset($this->_dirFiles);
         return true;
     }
 
@@ -777,9 +1052,68 @@ class PHP_Archive
     {
         return '1.0.0';
     }
+
+    /**
+     * Retrieve Phar-specific metadata for a Phar archive
+     *
+     * @param string $phar full path to Phar archive, or alias
+     * @return null|mixed The value that was serialized for the Phar
+     *                    archive's metadata
+     * @throws Exception
+     */
+    public static function getPharMetadata($phar)
+    {
+        if (isset(self::$_pharFiles[$phar])) {
+            $phar = self::$_pharFiles[$phar];
+        }
+        if (!isset(self::$_pharMapping[$phar])) {
+            throw new Exception('Unknown Phar archive: "' . $phar . '"');
+        }
+        return self::$_pharMapping[$phar][4];
+    }
+
+    /**
+     * Retrieve File-specific metadata for a Phar archive file
+     *
+     * @param string $phar full path to Phar archive, or alias
+     * @param string $file relative path to file within Phar archive
+     * @return null|mixed The value that was serialized for the Phar
+     *                    archive's metadata
+     * @throws Exception
+     */
+    public static function getFileMetadata($phar, $file)
+    {
+        if (!isset(self::$_pharFiles[$phar])) {
+            if (!isset(self::$_pharMapping[$phar])) {
+                throw new Exception('Unknown Phar archive: "' . $phar . '"');
+            }
+            $phar = self::$_pharMapping[$phar][0];
+        }
+        if (!isset(self::$_manifest[$phar])) {
+            throw new Exception('Unknown Phar: "' . $phar . '"');
+        }
+        $file = self::processFile($file);
+        if (!isset(self::$_manifest[$phar][$file])) {
+            throw new Exception('Unknown file "' . $file . '" within Phar "'. $phar . '"');
+        }
+        return self::$_manifest[$phar][$file][6];
+    }
+
+    /**
+     * @return list of supported signature algorithmns.
+     */
+    public static function getsupportedsignatures()
+    {
+        $ret = array('MD5', 'SHA-1');
+        if (extension_loaded('hash')) {
+            $ret[] = 'SHA-256';
+            $ret[] = 'SHA-512';
+        }
+        return $ret;
+    }
 }}
 if (!class_exists('Phar')) {
-    PHP_Archive::mapPhar(__FILE__, __COMPILER_HALT_OFFSET__);
+    PHP_Archive::mapPhar(null, 38854                   );
 } else {
     try {
         Phar::mapPhar();
@@ -787,27 +1121,28 @@ if (!class_exists('Phar')) {
         echo $e->getMessage();
     }
 }
-PHP_Archive::mapPhar(__FILE__, __COMPILER_HALT_OFFSET__ + strlen('__HALT'.'_COMPILER();'));
 if (class_exists('PHP_Archive') && !in_array('phar', stream_get_wrappers())) {
     stream_wrapper_register('phar', 'PHP_Archive');
 }
+
 @ini_set('memory_limit', -1);
 
+
 require_once 'phar://opendir.phar/indexhooha.php';
-__HALT_COMPILER();ã            opendir.phar       eof.phptR  }ôÇE¹  ÙjĞN          filenotfound.phptL  }ôÇEi  P±<0       )   filenotfound/makefilenotfoundphar.php.incö  }ôÇEâ   ^jØá          filenotfoundtest.php8   }ôÇE5   k.ä          filenotfound_phar.phptŠ  }ôÇEw  wR^ı          gopearphar.php.inc)  }ôÇE¯  Œ[ÁQ          indexhooha.php+   }ôÇE-   pWû          longfilename.phpt/  }ôÇE  8a¿       !   longfilename/makelongphar.php.inc™  }ôÇEÓ   ,ª²Õ          makepearphar.php.incã  }ôÇE
-   fîó          normalstat.phptÛ  }ôÇE   ÿ5‡\          normalstat_phar.phptã  }ôÇE  ¬ƒ±          opendir.phpt  }ôÇE  k†z          opendir/makeopendirphar.php.inc,  }ôÇE÷   Ê°E
-       
-   pearindex.php$  }ôÇE;  ;ø¿J          phar.log   }ôÇE   EÏlé          phpt_test.php.incw$  }ôÇE¼  *æ£^          planet_php/default_phar.phpĞ  }ôÇE1  *óÓü          planet_php/index.htm5]  }ôÇE‚  ¢RA          require_once.phptd  }ôÇEU  áÛ¨P       )   require_once/makerequire_oncephar.php.incû  }ôÇEÛ   ¢ËìO          require_once_phar.phptj  }ôÇE  ã˜Aü          savetest.phpG  }ôÇE®   j4¼       	   seek.phpt®  }ôÇE8  åb(          seek_phar.phptH  }ôÇEÜ  2³(d          streamstat.phpt
-  }ôÇE  ³N‡İ          streamstat_phar.phpt  }ôÇE'  RÄûr          test.php˜   }ôÇE\   B2“\       	   test1.php+   }ôÇE-   pWû       
-   test_path.php,   }ôÇE*   ª?           test_require.phpP   }ôÇEC   óá´	          test_tar.tar   }ôÇEİ   µBê'       ÍTQ‹Ô0~Ï¯!	Øv\÷ôX´‡‹‚ewô)ôºÓk¸n“t=ÿ»“ìáq‚¾¨…B2ı2ó}3_Z»z»+
-¶Ã! Şhs
--”nh=„è±=°¢Ø¾]7ëK‚_¸Á1İƒ8¢ÚÕÙƒk=
-Šß…„||QÎËÙÕœÓòœK	ßĞƒİ`‡í€ğ‹ÂšñD*Í—ì;»xI¥.×ïêŸ…<~š´GeM‡°×Ş´J%ŒRJx½ŞÔ¯vï7Õ¶nV›-)ÊélT)/ép¥6åO¤uc‚Â[b¼!‘÷äª
-Âäœõ²z¼h’ üõŞ¼iª•ï}ÄT"Ó¿Cü	ÏÑšë^˜ğüW°\>C­<ª÷˜ÊNFGx?CS¯6ŠX¥9Šè'”é}í­C#x:ö¼ª¤©R‹şÆ›{DV n/Ù±õj?œèÑö‚H’_úˆã˜×è“Ó†âÔœ ¿âÿÀ?S£±?Q›Ï~KK7Ú€y·d'û§„öÖ 1{¾şĞĞØÉõÿ\$İxúˆ…„³TØ3veí(úv(™6QÌä)”=–#OŸIv¯éu’ÛJÄ0†ïóc)¤ë‚—®­X,»½PBigmp7©™Ôâ»;éêÊ"æ*Lf¾ÿŸ™dY•/ª,’7£Í#ÔpĞwµƒWí;Xk¢\êŠ,[\eqÉÇg}×½„ß<ÒÖ¨•­[lªešÂ`ÓYô¤{9…OqvÊˆËâ&ßì5«šHá›&O‰,ªğ™L€†¾·ÎÃhj«6¾:|´CeMƒ Ë«r2sM§_;`Iñ)–ƒi<§Ãú½«M›Ä¸1¥bCò1ÂÉ	äjQÍ‹ó*e¦œ™nßÉ»ŞRÓ>ÈÈó Gxšc‡1ÁD&
-Š„^¡sÖ© ¸B—È¶L§âÛ0´Ú™z‰RaJ¥¸(æùyu;¿W‹¼œÍg|å¨“7Ö/íÀˆÿÒF/;©ãy›ß­5È¡q
-ù]É^D¼ÁokhÆğG@Ğf3úè>¿Ü/¥İŠÂ0Fï}Š\ÁŸp­·¢°Ë–êW!6S¶NkÚºûøZÅ¢ˆàE`È|œó1£<É[v•± 3Œ€ñ`ô=%fı‰Uf¶G)>x’ûV¨6pÉE‰6VĞCµ!åtşåKÙnZNt²!Cøc„5BÖ*Á
-jø?‘:,ViÆc“feœU¨i¥,¿u]¥õ”Wå½šõØç<ô'ËŸp%~à…ôÛ@—P”µù¦FCU¨=TàŞñšâÚ~\ajğW8GÊQ±~p”ú®oËœu×ÕÕ64Ü³±/È(àrHË/HÍÓP/ÈH,²Ò×ONLÎH-.I,Ñ	è— ÙF@fº‚z‘º¦5—½ •RMKÃ@½ï¯C 	˜<6V)5BP°´9(*Ë’LÌb»w7¨”şwg¬xğ`Naòæ}eÒ´Ì7eš²­Ó+%Õ˜t­0ğ.];i­6r‹ğ8ÌñÃ¡²R«g–¦››bU\Åùe×vL6Ÿ|«Euù½(I`Xµ"û*»(ƒ»¼ ëâ6?2|ë¥A®U…PK£ÄcÎ=†ó&pU¬óey·~à›|µX/è•¦$Ñ9î(™ï&RUQÆš^U|Àî³ªC<…Ğ&lÏ€ï5D˜Ï!ç›r],ËºŞ¨ìøİ:Ói‡ö¢À³ŸyzŠ2 †0¡%ùàI;0‹£1Úp/¸EG£v”dßÑş“Ê×®´ktOÁ/¿ Ã¤Æ¶½oµVH£¡ñü~E4Ôy£;T±GÏ¦ÓJT-A…Ö§Ç¸ÉAì58
-~¨»Œ÷àóÎà§ ¤²B—4œT#0ø-°c_íX[oÛ6~÷¯c’ÛBì%Yİx¶ÓpCö²Ë °m‘I¤xEÿûHênë¶6p÷¼Dâùx®ßá±øó»`´:ÔCT{«é£Ëî¡ÿ ×œ'Ä7»CŸéW­ÎóÖ§›bÅöŸôáãíL Zş½C:»PK÷µñÔŒ–wöÎb2ÚCñ(Võ5éILÏGŒ÷…2¡bE(îF3:pÁ2
+__HALT_COMPILER();p           opendir.phar       eof.phptñ  {|ÆFŠ  N€zam         filenotfound.phptë  {|ÆF9  ùO'm      )   filenotfound/makefilenotfoundphar.php.incï  {|ÆFÜ   
+ºm         filenotfound_phar.phptI  {|ÆFV  Cøoæm         gopearphar.php.inc)  {|ÆF¯  Œ[ÁQm         indexhooha.php+   {|ÆF-   pWûm         longfilename.phptÎ  {|ÆFŞ   }2vm      !   longfilename/makelongphar.php.inc™  {|ÆFÓ   ,ª²Õm         makepearphar.php.incã  {|ÆF
+   fîóm         normalstat.phpt·  {|ÆFğ  ®æ*m         normalstat_phar.phptß  {|ÆF  ‰šæum         opendir.phpt}	  {|ÆF-  è|‚~m         opendir/makeopendirphar.php.inc  {|ÆFÍ  åÂå m         phpt_test.php.incw$  {|ÆF¼  *æ£^m         planet_php/default_phar.phpĞ  {|ÆF1  *óÓüm         require_once.phptD  {|ÆFF  ?~—m      )   require_once/makerequire_oncephar.php.incû  {|ÆFá   ßİvm         require_once_phar.phptj  {|ÆF  ã˜Aüm      	   seek.phpt  {|ÆF+  Âª…m         seek_phar.phptH  {|ÆFÜ  2³(dm         streamstat.phpté  {|ÆF
+  üGám         streamstat_phar.phpt  {|ÆF&  w†m         test_tar.tar   {|ÆFİ   µBê'm      ÍSMk1½ëW¡ 	²k›Ö—æÃ˜fCL]lÒ“Ø¬G¶ÈZR¤uJúß;’MBôÒfA Í>½™7óTËj±,
+¶ÄØCD¼5v
+
+”~Óˆ}ÀfËŠbñuVÏ.	v:ñÏŒq!gUë¶¾	((~	y|\ÊáÍˆÓö”K	OèÃvã€Ç[ãğãÂÙîzJÍOØ/69§T—³oÕs¢€w;P9Û"¬L°Í…R	£”„.fóêËòûü‡ZTõt>¥-E9İíUâ%¾4¶%ş×ßĞtÎ®µé0áùk°,,CSÏrã(ÛJ¼³¦‡3°øêj:WõUÚ,ú°CIíé¯v­àéÚçÁàšARğ/VêRšTàTÖ}Ôj·õB£Ó‚Š¤qê».ï	 “MÒâÔœhñ=ÔŸK#¿®ö¥†oÒÒv.b>°½;a„•³HcÌ–¬®k;™ò¿‹¤IïSŒ%mH…;b7ÎuB7]DÉŒíÅPîCÙc9òé£d/š~u‘ßKÃ0ÇßóW¥Ö=øhÕ1fEÁÑöAAe½Úà–Ô$Eeì÷ÒÁ†ˆy
+÷ãsßû^–Õ¢ª³ŒÕè<ØQk¥ß ùĞ7>•ïa¯œÁNíeYõPlŠ5uÜ,†~`ªƒ¿<j§Œ–;Ó´Ø&<tó4…à¶7Àİ»xG¶¸#Äºxg@7ê­§^Ø÷n“g»”Ğøáö„¬ê²XÕ)Xô£Õù9ï¼ŒKb7yÚãŠÔ4~ª˜Äæ½ê(gGæĞK´ÖXîĞ&ü4›§9³ø1*‹Ğ*«›=&RµR¦¸/J±ªŸÊY‰Í²\Ò—¢<£ïÌHˆÿÊ&-¿J'‹yÎNİZ£‘B“KâyCòI­×pY-å€0t§ ¥a:Wô±÷¥ÁjÂ@†ï>Å»‚Æ°FƒFZ©OËš4‹:‰k¢>¾cV‰ˆĞÃÀ0ü|ßğôó4oXØ–Æ‚Ì0ÆÃIØñmœš=t†T‘Y—R¼û"÷¥PıÀ5§ÚXAƒjBÊñô3²Ùì6œød=†p`„BV*Á
+j8ş’ZŒ'f
+˜IV¢¦›²üÒö”ÖcJÜ\u'sÙhÃù,ZÈï ô#ŸVº> ØWåŸÿAµS{éºã=ÅíûA‰kƒ+áœ)gÅòIU¡ÿ–9Ë¶§ËM.hï{'•’AKÃ@…ïû+ÆHMµ”šBP°$9(*KH&f±İ»TJÿ»³)¶ˆx0§eöå›÷f6Ë´(ã˜•h,èAJ!_ ‚ißUŞ…í`+ŒqÅVlÇ:~X”F(ùÌâ¸¸ÉÖÙŠ—ó¾ë™h!<;
+øFU
+6aàş¢v€u§ 0¯¢Ø³ù1VÙmz$h|„F®dĞ-«-†œ;
+çLá:ËÓey—?ğ"]/ò©J-zË-å óıTÈ:HX;ÈÚ’Ø~v•lB'à›ˆíĞç¼ú³¤¼(ólYF ÑZ&Ç{cu¯Lè›	£Ÿ;<EcßP{ïIz	Û3ƒ–£ÖJs×pƒ:½ƒ(ùöŸTnìRÙV
+„øK6zù!H8LÛù6Ğ(‰T'Ş¯	C3O×8Eó@ ½‚qåBÂ¸tïŞc'îíX[oÛ6~÷¯c’ÛBì%Yİx¶ÓpCö²Ë °m‘I¤xEÿûHênë¶6p÷¼Dâùx®ßá±øó»`´:ÔCT{«é£Ëî¡ÿ ×œ'Ä7»CŸéW­ÎóÖ§›bÅöŸôáãíL Zş½C:»PK÷µñÔŒ–wöÎb2ÚCñ(Võ5éILÏGŒ÷…2¡bE(îF3:pÁ2
 0-~ÑŞ´ÎRSûÜÒÄ_ú3~úK¸Ö_zÛ¾j}É;¦Ï'CÛš‡˜äÃÈvhDğ
 ­Ëåcò„}<HË1SÌ8ğı*È
 %˜Cì#>Ì­!u7h­‘È'±¦«Ü!ÿ Õ8¡·——áµ9Á†)@;” b;Yˆ“8£ÙT»ZÏ—Û0|Ò Ô» İ‹–	öº,§;ØÕtL<°tE•K¬ºdPÈR‰ÙÕ¢0¤¯ß0ÈcccD
@@ -820,9 +1155,8 @@ V”ls¨Z’G/ú¢{ônhç~8›‡Ë‰óë};œ)B`«2´ê
 VaÄ!‹A•AbfÓbDr¥fÙÄ‡M0ÊC‚AÇ€ƒf@â6ÂÍ7A#ÜBQ¸t	Y	0Ç³7
 0õ˜$ÔÅĞZK:+ƒVßU•S ;<µ+¿#ì‘'‰_ú
 £çRÄ=ğ‘§|OF³’&HÛª²KÊ…eaf®¡O»ªğ +Œ©kÌbù„RB\”®ºak˜[Ëˆb€
-×HçC™tKxÉNá2å•õ,Ù(Rñ¹ÍÙÜZ|-Çï‰º»…õ~;Ä7úË‚M¢ÜŒ¨áäô<X‡ÛÌªÙMTÏNöp.VÿËkO¢íİà_³±/È(àâJMÎÈWˆwóôq·æ*K,ŠO)Í-ĞPÏHÍÉÉW×´æ²· ½’ÁJÄ0†ïyŠq/iiN^T\Šv±(º=è)”î¬
-Ô¤&©,ˆïî¤°È<ìÅ@`˜ùgæËO„h«m+k1Dğ³µÆ¾AÅ4tâĞEè±²££âŞŒh»wdBlkUo¨[ˆMıTQp³†‰yü˜Gíl°3>É3­“Fë
-¸¯›ê®}n^õ¶ReSRHYN½QG"¡õSalÏ¯™ÙCvÑ]&ÄqEl<Ïá‹)!ÌÓä|„m0Î.Õ®”,}?˜OL+hü÷öÎäÃÑş—lY¿HÖb(íÃ~pÀÓìœEJ­oÉ¿êEÑr0é®¤<é“Iÿ7™¢§?]æ°pİŠıÒş }Ñ
+×HçC™tKxÉNá2å•õ,Ù(Rñ¹ÍÙÜZ|-Çï‰º»…õ~;Ä7úË‚M¢ÜŒ¨áäô<X‡ÛÌªÙMTÏNöp.VÿËkO¢íİà_³±/È(àâJMÎÈWˆwóôq·æ*K,ŠO)Í-ĞPÏHÍÉÉW×´æ²· ½QÁŠÂ0½ç+/ÕCÚ“•Y#KÛÃî)„:kuRÓøÿN{ØËÃ›7oŞK¤lUÓJ)Z#„‘£3ÈkDk"t¢q42Ú{nş¸É\PHÙìËªÜñ´”»ò ¸X­;ˆ€×›¨=u'}ªuâh=ƒ¶e­>Ûcı­Umê
+—Œf<ud'¼~ÈuÙò©õ™dóé2û&€Ïƒš¢>òò6ì¬‡,Yáä	Zp<õU±L¼EQ¼Í‰ÿ7=ËÑt>ƒ‰Å¾÷ñr{}Ñ
 ‚0†ï{Š][PI]tSYIAo0–r¤sµèí;.‹¢èb8ø¿ÿç›Ó¹Mmá\kY˜6‘¿Ä8ÕğWª*p@ŸüáöÊ¨#<¹8M4
 :Få ¤·»µ”İ.%…½½‚o€
 ÷+(«¡[ê1¯ØŒ•JK2‚79E£±ÃHË^üP%ØÀ•‘œlådûáÆzŒg…9ÚT5¶
@@ -832,40 +1166,29 @@ VaÄ!‹A•AbfÓbDr¥fÙÄ‡M0ÊC‚AÇ€ƒf@â6ÂÍ7A#ÜBQ¸t	Y	0Ç³7
 r¢ÙùSg.‡QÍº*­³Dµ)U›ü@ä>Sú¯1¬Z¯£Fé:K§|Mç·NVNÙŞn¬E£98„pØ4%”AĞ@’#5¦É1Ÿ†šsñ´«…¤úvûúÌZÍTNëâˆ%{-,]p°–M‘}À/5´ÛTŞÆHò·Ù.êÎş-¾Xf‘eõ™rp™õè11]>g!'ˆ-­$)Ÿ#÷“ªİÊ4Í^æşä6Ïi°ñZHÂ§ÇšGÒ`µı?UÅ¡š3.öõÕ†˜½(¾oOÿZk#
 ìOWŸ0ní`›ırj,ŠUØqØ×[ç§Úø1µñ{ş.DzOÌÿvJë³wÅXÎâªGÌÂÄ­ÙŸÖÑAÚc&“™ù{~bP0Ñ¡VĞ’øÎ’=?ºnZ—Šs#	¡&’Jâä4Á‘¾ QæwrÊÜ©Tñw†xœ2©H. Wãoseº´¶u¦ŠÇïEÙoSn¤m§(Ë–L:/
 ·î]öAnàì	ÁÅ@iüû
-Â…‘Ò­¥(º~p·«ípÀ½qßã-b"¤yÕßõït9àÆÒ„æ&ò‰İ||‘Ã˜z.~!‚éeYØCO—K•Tt¼ –ï9Eh?îpå€?] Ë_(ø\–aòGq«eú6Fêÿæ›b=Yğ¶eå×¹$3põè÷|ãËQ}º¨üÅTQkÛ0~÷¯8J@6Ô‰Ó6m·µ)asYØ`&ÉÃÆFµ•XD‘\IIÓş÷”àÄĞ=ìe3¾;ùîÓ.q<K§³8fÌX0–ZËå(tëŠê §ŸÆÙø	7wuU|á†iÃ•Ìµª©f!æ÷©0:2è&İ„ ¸!Q¿À‡•b–¼db%Å3X,IŞ/^”m-“^V(Z²2$Î€Whÿšjh¸P(9¼°¸­ÀVÜìeá%¸¢ÿûñç´q¯Ùãšk–+Y0(¹–tÅÂ<wœ< Æ“ôıìËä[>M³Ñd„³h¥¶¹ÓÅ®Ô].´İÒ"ÙÇ¬7ÒEÅ7Ìqßÿ¦ŒPr1ç‚9>ùÍ÷ÓS]/ü˜°Z‹®%·p’=A–&9zrS
-­^³)[üè&¼kíÛ^¯%Òsçû¯ïOt°©1LÛôqM…	©ÖôB<f·CHNõtæĞùyré£ó&Ñ Aƒ.tåĞÅ•ƒ×v¶ß¯¸èM+ê'íĞ—ûŸ0)Ù†4Ú„Ku­TÉHË$‘‚ËåeÍË£hÑŠt[ÛğŸ;µyB-_íK²z%W¼’{ËFn¡Š¥i2¸½-.®»$nB»½s33P*ÉğùJ¿fx/q«şû=2VãßU8ˆà¤bB¨“ààö7ÅTQoÚ0~Ï¯¸UHN¤ ”n-ÚRmÒ"àaSUEibˆE°SÛ´tSÿûÎ%‹Ö=ìeC}÷ùüİgŸ×]†‹¥ëZKª4(hÍøè–y"á¶ú¥{M¹b‚ßY®»ø8‹f×¸ãâªÌK‹­À~¤Ò¬Æ©Ø–‰¤6òGÊvN]¯ëÄqà»ø¡i.€¨
-+³Wğâ4z ï¬—JôM]5.D’ÑÌ&ÆL%ÑŞş«CH_,Õ
-˜ÎAçLuáÅºšà®gŸÂÚ¾¤;&i,xJ!c’'[jÇ±É‰cºğa6ß/?Ï¿Æ‹0šÎ§‘E+¥.ŞSÙe<EßG­¿‘)_¯XAM>ùSZuaUª9kÕ¬ÖÁÂ;Î4\§O…ÓyİD¦¶–;ê`ÊMOW÷¶×k‰ôŒÿñ5wDœÆ²;I”¢R‡»¤Pv"eò6ÓƒË	øıS„¾îø<ğGÃªo¨ÁÀy&T¹
+Â…‘Ò­¥(º~p·«ípÀ½qßã-b"¤yÕßõït9àÆÒ„æ&ò‰İ||‘Ã˜z.~!‚éeYØCO—K•Tt¼ –ï9Eh?îpå€?] Ë_(ø\–aòGq«eú6Fêÿæ›b=Yğ¶eå×¹$3põè÷|ãËQ}º¨üÅTÑn›0}ç+®ªH©Ò4]·µ©¢ªÑ&
+%yØ4MÈ'X›Ú¦M7õßw
+	R÷°—
+	éÜÃáøàë‹ï¯¢åÊ÷Ó´¡Æp±
+A•SåøşòÃ<ß¢àê¦Ê+‡¯Á}`Js)’T–UÌE~O¹Ş)I!ApE<~:€Ks	Doy¨øRO`pIòÖynLÙÎ0ÑØ’f,s‰
+Ğ8ôß¦
+:-¤R¬
+Üä`r®÷¶ğìÜL1ÿíücÔ¥Wì¾æŠ%R¤2®-™›$V“$ğ~¾ˆŞ­>-¾$Ë(-f‘Å(•I¬/îJp‘bì½×ßØRlÖ¼`VOş$kö«‘ÚomÚ€«
+páZp× Ø#ÄÑl‘Äw±íškTÍ<”ìğ¡í`»uo†ÃÉĞæÿ·İ#â"ûSª5S&º¯i¡]ª}?3„ë)„§ˆF:³h</šjÜñçštè¢C¯,:[xiá`÷õò›­^÷ªQØ/ËÎ:H2ö@ò¨*eÆH/"Û#IÍ³£jÓ«Tß[ó­[PÃË–è2’ò.}û^l;»pÏÈt«8™ƒ¥= ¶;íLÙ~iÈ¤`xÆšy‰>Çx&qbşûÒFá¯Èxp’³¢'Î!í/ÅTQoÚ0~Ï¯¸UHN¤ Œn-ÚR
+mÒ"àaSUEYbˆE°SÛ´tSÿûÎ	
+Ú=ìeC}÷ùüù;Ÿ×]†‹¥ëZKª4(hÍøè–y"áºú¥{M¹b‚ßX®»ø<‹fW¸ãü²ÌK‹­À¾£Ò¬Æ©Ø–‰¤6òÊvN]¯ëçÄqà—ø¡i.€¨
++³Wğâ4z ï­ÇJôMsj\ˆ$£™MŒ™J¢½ı¹CH_,Õ
+î™ÎAçLtáÑºœ`W³/ac_ÒÛ“4<¥1É“-µãØäÄ±]ø8›‡–_çßãEMçS„È¢•RÇFï©ì2¢ïƒÖßÈ‚¯W¬ &Ÿü)­º°*ÕÔZ5OëàÁ;Î4\ §÷…Óy}ŠLm-wÔÁ”=.šÖW÷®×k‰ôŒÿñ5wDœ£ew’(E¥owI¡ìDÊäl,Óƒ‹	øıS„¾îø,ğGÃªo¨ÁÀy&T¹
 
-ª¸ F£j{µ|fàğÌÀ±ıíøÎDç­È÷Ú¡ß(øı“Œ>’Æ&a\ß­’­È(iù%¼`|Cj×dÇ2Rû%ëV$V9UìÛAîp’h¶=µa²}…K_áî‹M-w”¿/DºQ5ƒCÛÙã¼š§cúv˜6ÓI™à__5Iá—_+ÎÒ]JKüÛ²NrZâÄjÜş ­–]kÛ0†ïı+Ô°
-qÌ.v³.-asYØ`&ÉÅÆFØÇ±¨#¹’ÜÆşûÔØI·v‘!=zÏ{$û$É&[o’$Ø€ÒDtÀ+&£8‘ĞR
-©{^j&8m™~$‚Jf]Cå”ĞV	ÂTaãSÔ¬…(’dıy™/¯‘™$×Ë/Ş_uMH¸í™„Bğ.ãtQQ˜˜¢ˆÉŒ|\®²›¯«ïÅ:Ë«q6ÄµºĞ¨wîfŒ—áEÀj•-Uª€¦´ŠÂe…qL~iJTßuBjbôxĞÀfbŸ>“æŸòt!Ë†İÙñ¿O»·0|-Ân?DY+q»	É|´?4ÓïÒô8*
-cŒ“ úVc(•’>F8uß í$ª±@ÎæsML!0D­ÍÀãÑ—=â‡ú9’Â:$óK2”ñe˜“]O-ÊfR
-ë^>.‹±t¸çÌ$ÁáäÙbU`Ìù‹´ìÁ¤¹I.±¾ uvÛcz‘UJ"Ü;Q›Ji»9NáÃ§TëIç^£µÈÌXù¡QÄ…®EÏ«ÿ`ÆU#g ÿ‹ñ)©0ŞùÈ·ÅºR9³7ñtã<4B4ÔQU+øÖ&Š7Ô¡ÇWßwô<ZÅ…ÜáŒ¦ÚUØäå|/»“]?¼)œ„³ír<KÖ”Vl­X-å`JÕ9X|ü%ó„q-×1ËËATô<¼àÀ³døÉIã|çãÖH^„y0Ú Şx`ÕÎşD(’Fƒñª 8˜=ÚÔ\30­_Ù
-c;w@Ùˆ§©ì"¯.±ãÎ¾åØtbÏıR+öü›‹Ç‚ñmô6&ç
-´­8¸?¥Ñ]kÂ0à{E.
-I‡ZvíVWjeÂÆJ•Á®Â±9˜0M»Øº_¿ÓYÁï›]NÂáys’»a©ËÃÚ8”…Í‘ñô1
-"—k³Á vUáúÔÅWúÁÂw}¹VÆ	ZV(¤O)}Ğñò-Èî™ÅOF„l	ÙF	n¬Â/]ş¸.ãE‰–4Ú‚kö‹¾gõBPj´xÜeà|¿NƒF¸ÙZş136K¼â°>M²$½dorš¤QQI§¼Âuu»»ïÑ!kØ`JÙ§úeü`~Òj»4ö]x
-Ğèó3ïÙ~Ér¼y/TõªTÃ_µZmSÛHşî_1q9‘\kCÈ§+98‡%Ôe2$©;B)BÛ:ôáXşûv÷ÌHIS[—ÚÍJšî§{zúu¼ï?¤«´·(b?’˜å\ä<ËìA~ŸòDğï"ñ1b>ì=ôü	L’°İ]vè_Ì§C–ñ¼Èâ	‘ &É$
-ó²Ì»g6-àŸC÷p6;ÁÓîcıC$íjËßf'Ç'Gšà›—ÅA¼4HÎfç‡šàÌË°6ÒÉéÅñ´¤;IòÀçÁôtVªC4Ó$ã@DWêUQvé6=ıãìøs6JÁ’È’Zƒä]ğ_Îg
-›h¿uà™J„k•©*Je-¢vkõrIŞp%iÒ,ˆsÖ¯Vp$ÄÒ•¸9Ó÷¸?é=ö¶·Ï]¢uW^<yf[Ê-º½ÍX!¼%·‡½ÊWå)”‰‹07]ñ0Åõ¹Ÿ«Úi—arí…lfÉ2ö"ôi/]?‰"+ÔşD>D`]$)mÂÃé«5bÖ¥,1pvx0sœ@í•*Ã!{(-»H‹\Ø
-t¤6Ş[òü.äØëƒ)ê#ã¡à_rc¯vÕ.Ö£*K×@ª ­›ãUi H°W?šBƒÜP¨ÅR¾âtV²¡CgZRFŞ¯Ç€6å 7òR»/ò¾÷0ÖXIy9wÿõøAa=
-Æ^CÊ '³M¤jp¸ç¯˜IÀ<Á°iôõzBÔRîrk—	ræ…])4"ÎÃ³wÕÆNô#~¤è›6’Ô÷óØk ›öû‚®àT®É.ÂWL©Ì.ÕÃ¸\yŸzĞBœˆ=°È–	y!ú½_AâÑ2Åü½Ïò„…È˜EİÚE¬Àä>ø`GëZ®oŒø^±îID°&ËWj
-,O/"å~°ø\ËÙê×İ½ğ^…ÄÂÁõ²úÈ9¦ *§” Dl˜;Ğ'’x,«Ô °Bö•ûu/“Å²|íŸJÇ0YŸşß–öbò–g×‰ò{ò[2{Î^ælgØ…ğ³D¸æìgğ|Äæ¼«‹ßg”»Ñ’lªÀò ·\d™òû¤±ºØ§&»¸‡ô½`nì^{ƒjQÏn½,ğ®üPXè=?€¬ä£b(ñ˜£Ò–"÷²_f^º
-|pû(¿²(™ó.VQcÅæ¡mÇ.®óW—ùºø
-Ü/=1îXn
-ÔÅpÚLôjÄÆèqˆ4„.cr›j/³óU X$+Y§Û}-5ò”e&•òZE¯5e1âf |¨	­ì{®‰íz ÃR.šª*€‰%AÈ‚Ğ*S+rs¯Çÿ²AøS
-èLø2Î	cÒ{j»ÊBIú[Ø.û*	¶¯_gûäŠvÿŸ}:«Hû[ĞÀ(d{ØEşòã%tdu¶ÿÁg÷IÆYcÉJ1n©íßÜ&åñC3sm}ãÈê-ˆ Ãæ±hãTµ¤´gU?‰Õ8õGC­_î\Á´Û£g¤HŞ·Wuğf»ô2Eì{¬Ujé,ÿÖhÊÌÒ`Ú‚ÅI¹, CÉ³{f¥ÒZÔm÷pÏ¯ VÀqÏm‹Ndöåäâßg‡Vi`h¹)²áE‰IÊoõOƒÅÂw‹è%Qm$ec»üØ3(Np–úçÁô_³ƒ)’î ÓìqàB²-¨­É[d¡K]¸…{)8ĞöH¶D2á-¸‹©¶R}‡‰<ˆ¸QÛoI|ríQ~»‹°+[áU"óÌóoä"*yÕú*ÂjyáÁ)ë‘·|÷g‘ÀèâfEŒ:Ô{‡ª›q7‰}–YyŒh-|ÖO©5Ù„r{JyûE²eÚˆĞEòí#ƒ{*½°éß³$Î!M`Kg[ÓÏÇxÖfŸİózV <1ğ²å-P)‰®”è8—çÇ`éªÀQ€ÊÉ¤C±KÃ…m-‰ıØ\jì]èW	ˆ³Là2Úgäd"VÁç©g]›ú)A’šMß™:sç£s´ú ÎÎíWl<dğ,Ús`½‰Sa–[Q3±şLo(U…ƒ–_p5ÅÓÉ¡!Z]ì
-\ÕÁRù]¶êF,äğåZ“M¯Ê¥ï€.U&U±ÃƒŞ“¸r½º×ó³İ«å[Ncvkï„˜w®&á5ˆ½™4Ğ¦hÍ<‡÷H–÷ZĞu*µ5N×+Ïu ©g^ĞéŠ d¼iE™rJ³<ÅP©»¦ÆWĞ
-lCkÓn£®Íw«ªÖ´¾—ú}é'e©m^nÈYªb…v«Eßºİè8š§!­m‹muíª­6@,FûYîìšh=t)á4¾Ô¡”]ÌƒSÙ¥Æ{I‘Ã˜úÑË=»Oz J¹'‹y] ƒyVı$ËŠ4ç0+D(Ûß8éˆİÁğìİrÀ`Áœ{ìnÅap€¯üÇ–ã/hƒÒ“Æ{ó3J*OtÒ“'
-+tÔŸğŠ{2r"ÒÙ|şŒÕ|$S©
-PÆÔÀğ;l.”—“Ã¡NØëxÓ,–ºÀtX¦úMhEf,¦*™€†Å“—h"°„"Ø†Áq—GgÁèK	XH
-0ª'èİ/²ŒÇ0ÒõÍcØAg<…™AÈFH® ÕÍ1@÷a#Ñ=|¦›<¨<Ø’iDš±ADéªòjÂõlX÷»¯¾÷)z£¹ÊãÒÆÃgóæ€î‡€áÒüŞV)kÈ>èìÅês&›¥Ùy#1âµ=¸á÷&ÀI¡_YüWÂ¹ØÖ®5RÍ$YnÛ¦:;4Œhk¸A’şøÿ×E¦‡´Í’ÑU+K?‰uŞÕ¬?¢M4½áŒGÉ-Ô²ÊK,»‘º`å±ÖÈôäòûıF½ş³b~şM1ãÍÄ|mˆ‘ı“ü)ÁRÓoİ,í†£»ihSeÂ¤tù*Np´‚!B°e‚Ù,‘™IVô†%d&¸Tz…iƒxŸnF¨ªu8S™.J#]ó“¹æÕëXµ3an+o8p§0ÓmèÎ¦ªO•ğ &RªÊ]ú€½yÓ¥	ûóÏÎH)ËŠ¾ê'ì¡óÖ¢¹õê¾°_Wrh³]xUš€Êõ´~­f²šf^ ¸l¬éìøâJ(S
- ”lĞVäXëêÅ_ß“Ê·HŠ˜ÆrùZ/It?cµº'«£÷0JCºö“ô
-X%ßÜoÈ°¨WMbhJè±€&>Q‹ÊùäÉcŸ
-ãXèOid·J‹ö*#¥0¨¯í9f‡_f'º—¢ßr­öÂóÁ!*ß)“…bRB’Ô”±şç=úMgy{eng@7™0¤.i“x©_¤§kuŒ^N‡0‹ú*¨Q
-©¦ôß†[qµ±úÍj¥OÍÅÓs:·`|
-úEÈëÛ5ReÕN Ó­ƒÀ–¿U—F7f^(K^jÉğ¯•áÓ»ºT)DJ({¢š˜7”´¸ö~R/Ë– «Š0hèVĞI34ÉšÛOùK¬-ÛF°ÓB—ÕF]\à•ZõcU•—ÍÚSÙ¡ÆNí)YbŞ”¢ÕÙÌ/-:SôI¼“5:ÚæŸªƒTÉ“İc¯û­ó¢–LR\ƒUÔÁ¼±wdk<¶ºÔ*<ï†ëôyì¼Ï$7¥iaÆ©;‚WşW›¤‘¥cĞmW—~ßÄÉ]\ş6û£¼-®şoG1•Ûåmå‡½¿ S  åZ[oÚH~çWÕF"!}MJÚlJÕÕ¶iDÓ§€,Çƒ·Î›D+şû¹ßÆäbVZR˜Ë¹|ç›3—ÓwïWËUçCH¼(ñ±C‰‡‘u…ïùèc‡ĞiÔv¦˜ø˜a¶í¸QBÂ Ä¾Ïğ¯$déğËÉÙt4aŒ²ïÜõ~ÖÑ^äÆ1
+ª¸ A£j{µüÖÀáÀÀ±ıõøÆDg­È÷Ú¡ßhùı’ŒŞ‘£IÂ¸ /’­È(i¹%¼`|CÏdÇ2r”]·"ùtJ] Qìg-WWAÍ¶5ÑØ%ÛW¸ôîG±iä¼#Òz"p`;{œUólLÏêI3]T	NñåUS~‹ğ¥âı÷—¥´Ä¿,;pà$§E!N¬£Ûß­–]kÛ0†ïı+ÎJÀ2ÄÉÕnÖ%%l.Ì$¹Ø(Eû86u$W–éÊØß‘Ûmw;ò9Şóê3wÑv†ŞkªB™š¡ÆRL!kdb
+%EY˜gPÌª\è)ˆ²VPÔÜÅÏ©‘%²ÀÃí×u¼¾%fŞ®¿EÔøxSå•§ñ±)4r%J“â€ŒsÃy 3ø¼ŞDŸvß7?ù6ŠW›5©×§\Ã
+é£‘«Y!ÿúbÖ©Bÿ­è×F¹Ji°	µaÑ¹ãÛîóùyÔÜ(Ncİ”†B…Öâ™Q×SN® ËÈ-„w‹°‰õ‰B4ŠÔÒ,<øí†>!î\Ô}Gò3Kh]~]ÕäÒ‚©C¹JÒ6ïmá]ÉıãMÈãF¶‰OG«
+¿Ävy0£´eBÂ¥¨kÔ&zl¨<æ”£±}T™+ã§ş}<–bYG'Î"ÛãäûV‘T&SLÿƒé²:N~‰S·Ş
+îi"„nIne_+dŠ¿r¥raa@¥’{W*m©ÎŸc†u8¢URéõa†
+ëI£,ˆîtºØõ~kòòÈÀ*…DëO5 ®óó~$ÌPÎY£Ì~ø0c1†.¨Ã{¤'"Ì®JnˆCÿK17moÚ©HÛ°xRª»KùÚÃ$WÇkH•DzÜ,éYıˆéé@›×.Ôbª¾{ö>€«ËR]y=î/µ–]o‚0†ïı\˜€É”ìÚMgœf&[fÜnvÕT8|DhY)nÙ¯_‹ˆP˜š¬\´oïsJï¦Iô|f!D‰†¹~ZÛ3æáì9Ì)‰(s|&îìÃ1Î	ÜYâ"8¡åêyĞ`0îõƒ¡qoø2„*,P²Ì¸ğPàÜîÆ0iD¸‰)frîÿ˜¯á»î2Œ $6ÉÆÈx\mó÷×Íz[¬g›™
+ÕäòÛ#HAkƒ õ¤!—Œr¬Íİ7Ê=š·Ä4ÅNxHö¤ZYé„lÇxUáÈ…ÄQ“9¬-?_¼©˜©‰´¨Úˆ%~^—¸!/R
+j—ƒ:É§|-š¢6¬¦í™·êÚ¨„²G)Ç¼¬Q•:`Õ¿µV]µØró·¥«øRˆî\ÊÊksmé†äß ZcSÔÇ‹0Ù»ÄvÁÃYtêcN>³¬-‡ê=ïcUPû}}p'ù•íoŠğê_Û+ÚÈ)À®„&Zıë)Š>.qmoT¥XJmmºÖ##âÂ–£µ¹ T0)ŞÃZdĞô¿f»;Ø=d$
+ÉÎêKYÄ¶åô\ÀÿÃéo‡7‹KŒ§“_åZ[oÚH~çWÕF"!}MJÚlJÕÕ¶iDÓ§€,Çƒ·Î›D+şû¹ßÆäbVZR˜Ë¹|ç›3—ÓwïWËUçCH¼(ñ±C‰‡‘u…ïùèc‡ĞiÔv¦˜ø˜a¶í¸QBÂ Ä¾Ïğ¯$déğËÉÙt4aŒ²ïÜõ~ÖÑ^äÆ1
 ÎåçË+óÎ?Ÿß.C}Ç½”D'¹6,„Çª%HˆÇCJ
 ì~:
 QàF1¢>¡Òs—{Ë´y e(}âÓçË0>8urÓûEò£”0ÆeÌ}°ÙaÌñqŒ¹Äá³Kü($[Ú8™N¿Mó³/_ş8;ÿk¨'¿‘B‡ÈZa—IÁçnİ€ÁÖ '8İ-¸2È™Ÿªv2ø¥qà&O%Úu*c%Õ wİQ‹˜Wlµûğ³jÕ"îòĞ»Lâ¥meÖ¼k°ş¡Œ´èÍßŸ")yXpU4œ.0ÿŠãØ]`;µ¸ÖÎ‚ƒFc‹±½Àw³\`.f\¸ =i·Êœ²h»0v\=,ïú E†yÂâ,Áå ä­Ü0’„÷ñM²p„Wœ¹ ‘3#€½%E½Ê‘›‹ÊŒô²!Z±\MN_P97¶S5 PªÀHE&ç=šX›„h<FG;º/„¥ÚÆZ_IÂÆ˜
@@ -880,95 +1203,33 @@ X%ßÜoÈ°¨WMbhJè±€&>Q‹ÊùäÉcŸ
  ß£—¬œWR«uŠ'}óĞ!ª§ (ŒylËJ­#*µÕ‚R]Ñh naç1ìáğ7öÍ÷oY …{ì‚ïĞFƒm¾ß¯"êc[à3lw¸ãô„'ÊìÑ}Kø*QÇiqH.S‹'[—V]cº ]qÏIKİ–azÉ‘xndœªoªø<¨y))˜ëFÌçÛ<³ª OÒàVcjˆŠñéF¦µ¼hH!y;V*ù±æLFx¢ß€^q³ü€²t})m/¹„PÂ!d)éò)åAZj…$C|/iù¯	(lŒ-aºH•²<”à—‡³á…¶¢*qŠ¡èÌIlÒªĞ™–=Ó§Èc=Ñ!%^Í¯- ¬Z(
 	ø‰
 µo9TôëriêmÙh äî,Šì-ş/Laã_wŞŸş’OOÂ@Åïıs 8ØŞ©HŒ©.jxiH³¶S:Únkw	á»»» Š¢°‡Íf÷7ï½Ììé°)sèv’‡hôb¼?_'7·—w8Á 0àJLIù†DX.áéÀ¼{`V'ç’–y
-h„.ìÑ˜]EãíNz¡#ÕœuZ@WéV×e=§¶ûU#-4IÅµ4Ÿâv¥Bàs3Åş¯;ú~éÒT\‘~kÈ„A6pT¸C=µ$^ÂjSÎ‹Yè­FÌBÿje”‹Y©w…hÁz¬Üî¶‚DfÚ‰µ4MÔ'ccÔk»™Ë´œe6a!Ú~°™|`HØÙš^{­<Ï} VŠôşo´XK¯3n)©eº5±1öe Ò´ëïÒ€eF¿ĞºÃ³İ\{SÛH¶ÿ{ü):Şİj±üà à’		70ïš¢ÚRÛî ×ª%Œóéïïœ–da,0™LÕ½;SId©ûôy¿º¥ıgÇ.;?ã4ğÅùO¯ŞŸ‰f«İşeã¨İ>¾<¿¾½<{/ºNG\&24:ÕQ(ıvûäCS4ÇiïµÛ“ÉÄ™l8Q2j_~jß¬.MÎ/[ie¦ã¥^³ßØço?4Àtwwwíl«¤×o|·ŸêÔWıs_†*çoÏ÷Ûö*•‚à´Ô2}sĞ<ŠÂT…iër«¦pí¯ƒfªnÓ6Á}!Ü±LŒJ²tØÚiŠ6ñux-å4Í8JR7K…ÆÜ¦'jxÑ˜±hÅãØÁ¿í¡¼¡şª‚²Óö_b˜Pî8«Ï´Á¢«ÿ¼zsrùÇŠ1+®­‰—bÅÂ»"x.îŠ=QòB¼ì7s¼Ò©¯ÌX©´)RĞ–“„9øMÜ8h«¡ÌüT\ĞĞûØ+)™8<áJ?UI(S%–XáüäğSøY«õ‡ŠÓ“?çø÷ ‹‡VWq8²(XP¨ĞÓÃ?[-úeÜDÇ©0‰`ÀÕ;ŸÍXŸå´£šıı¶½‚¶´­ºì"oJ€<}#´áá6´é»ïöÇİş¾|T¤ ªƒ‘E "jÓÖ)ƒëøåPƒ#¸hÙ1hj
-p\*uÆ¸Ê­6–øl©^ÿĞ÷E¨&FèPD¡€è*èmĞQ%':´äĞ×—–4ˆnùÀm÷f¸7—!{àG#Ğ>ÃTĞÕøæ_N²Ô7Ê´»İ+»Ì–¹ëÔ\u;ÎÕ†·ˆs%¯<9u¬¨ D#ÅH!F’«İ®³íô:ÍuÑÙİëîˆŸ.Ö€ú¦E=æ¾»Ğ¡«0k¨&4Ó¬‹‰‚â2_&şTŒ°Ò‚q(B‰:ˆ“èFğ)Â0¨t¬V%Ñ½“a&“©x±&~T*+*€
-t8ÚcÚ‡ÃĞc•Àà¢@	x-Ø†›J”I1V’hbT{”©Æ-×ˆaâ]ÕXÕé
-DğPÄuFi‰íš](ó-±0ËşYôEû¾lo9=±±õ¯ı6nÎ^œ´·ş'İ¹'c•HÜŸ»ıA¥¤©¨=Ñ›{øZ)/µ©d‘c~­£ğ?™J"~¸9÷ğ±b2÷`¿RïïU´÷ğa¤IYÆ÷—l-Ö·Ê‡ƒõZÄœÀ8Ğ‰ÂÚ^'ÒM³Dyâ“’>B¥2_cqõKä¬hƒêÎÖFNé‘4ªuÅÑùF‰úğôğJ&‰œ®®İ³©ÎŞFï®MY™ä²§¡øÅ–Ôì5ÀÙuqSŠ>…°¤ëFbµ‡ûÔ1p€»„M™%Íş¾ÌŒx“ÁÜ`1„YG6§"‹ÙôL6ø¬ÜTDCáEd=R¸Dİ¾I“(õuˆa/gäî»‘§î31ÇªàA³—ûmæX²Û…Nôÿã¦FùÃ¯¤Ú7NÇĞÃìZ²¬K?	æ« J
-è8Ó‰Ä50>¼›`)±-v‡p<ğf8C±ŠØ²’;%³T3ÿåd	æ‚İÚ8âéª„J^…‰çj BÄu<1ÍşÏ¾˜ee	<*D‰_–©<.Éµ pK$Ì³?7”ïÄ% \Â…š|@ñ 
-¨RœÒ`rÿwx"áØæ–ˆrw*öõ]îX"‡¾†‘Î®Yqz­ÎQr…£x´;Vî5ô9_¸ô•#vìµš^©[ÄSÌİy3Y}Áñ—ğ£(.ÜìÓæ+é]<çaÑAìÃ˜™ 2/(\(ê‡ÃƒÄ‘%ŸHøËÂ™Hÿº`/]Ï„ãJßH÷ZXVMT{!¿v#ıL™ù÷Û…rŞ5„OÊ Xd
-pS¤øˆ8QÈ†¾él8Ï™	ôiÂ§£
-zfÔ
-2 _`¶œÃq†Ÿç§§§íí³ñ—uq¤|ôPôœí7ôû|—;¸\C&ì[ŠØ²ÉÂ‹\ÈÌx7sœKD
-Œ7Œ”yGƒ„œLDH›§!ïBâ$©Ä4{Æ9%Î‚ş;¹U(âp[\êÀŞ:Î-?A¾BxÊ–Ø¢+òÿöv¶·zÂˆšÿrıa¶YåÀô^ñ´çô¶ºÍÊôãÏÆR"ûsf––Gl÷€°QŒÇĞİÍÍ­»ºİ
-§[af¤ ³9ó|k«Ó›Óƒ¸r0UcÂÄ­bØ¦³ı¼»1GA÷ùs§3›XLÚ.˜Öq¶;[»s«mõvœİ;H“ÂßUöFcµ1±'Z§»ÙaşÓ:H¸*âÖPã±>Ü×«¶ÿW”§ÛíìÖëÎ#ÊÓuvºÛÏwæ”gû	ÊÜÙ¸£¼$¼­İZuÊ³ÕİŞ™Óën?ª<[ÎF·³5§¼ÏwR±ãôïô¶ïNÚŞÜrz_¡<[İ­•§È	˜F`‘¿Sëì¬†Ò‡d1q¥Ç€Áf~ŠeŠŠ1VÖæ€ne|7Òü»v¸Uƒ;f2ÖàíDÒ²eÊ;˜
-N‹ …„)-Üò0]F“&L¦h¨º|õTÈ  ÆdIœhiŒ£‰0=¤É‹#ÙT<«[ırLüÌ+^é›ÕìhìãOJKNB·ˆé,„îq¼B)b9ƒGr¢¨†¾»Æ_¬*Uà·©şÀ.d&VŠWnö‘ß#{·2<×îµ_-ú–­øæÀÎJŞN÷êwzWÜú4é•§
-,%š˜+êŞ]Q+Ï‚X¥Ü™ÍÉ¦)"Ÿ"Ê)‚¦ØîCeŠ-
-;eiØëìÁÚï—†§V¥f!“1’ÆFÃ¡vIeeF™k{)ƒ,E’0¡¼ã1Já¨R.r²Ä?o?uÜãèæıÆ«X½ùÙüöë'ÿ÷£îµü<üz–ıÖÛMß÷Ş™AÏ½ùí×wŸå¿÷ûÅÎäìøpòáò0Ãütpxpğ½â@$™^iï <,;wOÓ¢e'è"Õä|šzÑÄ¡~NfV¾âÊ‹D¥YŠ4ÉÔ‹ü,½~nhÿXŞ¨éŠ¨}Ù5ØºXŞcˆÇõ¡‹z¨ûÍm'Šr:¤¶˜L<Cå_Æ9(*ÀÄ±LÒiƒ=n¢)/Ô¡ëg
- uY£©pª‰]ãh¦7‚Œø»µù›ñ×¶p¾mÿ¦—“w†,F#8‰×(ŠÅO0Ò3ãˆÓ ÑÃèî~ˆÄâó³ÆÚÙ~¨sA]É”ò9ŠÖ&*áGÚ.(¨„mPË o
-BT¥c #Äašú”iRı ¿g#Ê÷~úB‡1=á¦>MjŠ5‚½6üÙíïGé‹<ö"*AÃjÃIdƒT(¯Ü(òW³¢ZÖïä¼È÷"ŸÓ¼POSöxs‰üÀ§FTg¨G¾À>ò&Á˜³­0ùëB6Èh
-¦0Á¸"Ä¦”5Áå1bu \	S®4&ò0ÅA\5fP‘…6}­t1 )3«´fk™õ<Iá5áÕP­@j_PzÆiDr"@YİÆD[fW	¡‡«”;‚éÃ‘ÔjtÚ°x;ûƒ„wo7cŞ"} ‰’ëJZ™ó!š¬[±Lh¥*¶ÇDDdâÔ7¯®R¹,ÄŞuÄ‘*^1Ë*C‹+16"Áå¡¬Û( ²Tª6Jz)dsÈ†kãz¶Ô…ê„-ÀÊ–ÊL”§Œµç![=º¸ØËm ~aºQ„ªĞóµ*´mŞtP“9XüOÈRäm¢ƒ¸ ƒ MJ“àŸà4‘Â!ØDŠv™ªjIñ7
-1„`
-Õşls¤®=iY}"9FˆádÎJèñîxîlÁO¶Å¤}qŞeäÛTa‹–m@şâsfˆiX|ïN‡œŸã	ib®+€O{	í9DÈ+d8ÅÊĞ‹õ0)­€i+"“4„ VÔ³2î“¯wEœ¼²f¿ğ¦ÃNÿB)q¬‚¨lZÕ²Ò0Ïd™AdÍ›ê\äÉE½bAÛ"'äşÀü">PïˆsK8¬¥MÑÇ/fÆ,æYÇIP-Ä²_ùòîÄMò<ä¸T§6P$Êé~½¸xÄa™Ş÷¹±øÓõ™®†YDëİ…(6¦Ái6ˆ>ƒÃ5ÙhDzfóŒ‚_CˆáXrÇ.×çÜ,»B8¼sZìÀÏ[
-É	ÑİÑË=w¥9òPvƒİyÄ+]VˆÉcd)Ş¢–C°^º	©ÿŒïEÀå°3²$'?0ò×>Ù2Û&)i"<üíö2â
-’Ğ@Q•õHsq£´†DÅQ‚ç¨cë,"W~¦ucZ‚óËoQõş»“·nµÒzMİ(Mó«%Î‘S‹ÓÓùd­{#{®1´µ1¥ÆÍûE!2rr…ºf­ÛTPLÅW¢ŸW6ı¢á€DÓîT¦éëkEJGlÈbVÊÉU>e¨‘d”
-i:aKäpõe·‚(èLmó–@IJ{¢F*¯á”à¢†	8]ªD£*ò§Ï€”õ[{R<¦Ài†x§
-;Šâ5-;]Á ›²Â@“ÀŠG“û˜²%¶òız.dc …ë
-?Š®E8ÏøE©kÓjbÖ™¦Y¯Â
-ĞœNNÕvxÜGÎ‚JÇ#—¨Ù”	¡âp€òø€wlbÁM#Š!BæÜK1³(œ/¢â^fyË`
-TTš^ÈS‘g*
-%|ª€Ù<‡’–§ne“İy
- (†K˜Q‚ØÅ*ôÒ?(¦su ¬ŞÙŞÙí<ßŞìt¶{;|wrĞ£ö+š=ñ@xü†Î¦û7¶{&ŠÖ3y»‡Âö	Ò©é¤ îIŞ…Î8ğ'dè°;jÒ°óE–ôœ“©ÎÎn¹¹Ÿºà
-QXP9¹uw©ÍÿÒéÌù:@§ÃŒ À[À‹h5œÙå€¢o“¨sæU27raÑ°'Ñ(‘Açå8î"q_` RòZd54(Tz4†ê%°boiÃîœŠtí’Kóà¯JªìÙ›i±$µ¨2vŸ›wqœˆ%¬ş‹Xõ£<ÌSn¿¶.FÔk(7¼°¼?m@ürN¸*u+©Ìµ 5Há8#µÚıö
-J°êBi?)ŸKŒÊóòAÜSNÔïL=f§D)H)À©p~k:«nMÓ®¹Jäd¹«$üá†
-İ¶NOÒÈpÄÎ•zFH
-
-•2lÀµ¢a‹rC¶¥" Ã²DÎr)Úáyfò4q}¤Qé' Z
-çìÌo’×™XïÍ=jà0 d–·g¨E9Ìšò9p“j àŞéQÚâ¡8%{­µ…û¯ÌÍ‚”Àjj8Ò¹H¬:Ô·³|×f{*ˆ)÷9=UørKé`äº”²zÎÂ…so
-r¡Y~Aó6lN&2©A ñT®š›0€[ #©¥	 eìâsc6‡£)â·\P &úv­*›U˜´ÇÅp£ĞS¶®²Ud‰›Ø¬5µTšu;ÛdD’ªtÊ¨ôi;Ø,’n"ò¾îSG!Ñ´_†‚B÷‘’Ã˜İpağQ¶ÜpÌmËB[­$Ò¼¬Ñ£0Jl±ŠDêyã˜·€“åq²JÍ·ôAÏ4ÑÎH›ğP´GqĞìvšÈÅ½tŒË^ô%õz;ùPŒßtÖó^´ôt‚%J~¦q”r¬ ŸÜîlµ-#ZD¿iİ˜Ü¯£(ŸˆyÌçì+ª0!ïø<’òL±`ı‰ëısc«»ÕìÃÛÃÙÆ€cÚĞmÌ˜4>€”ÁK"X°¼jMIRo³]¢	ŸJG‚šıwj8„T¥½h$wÀ¬×`îu‡åÅ'+>õ\šóë_¼ÿ¥uK§¶n¹—Mlíu·¯VøØë¬\±Í
-ê;Ùƒ_yj+~°){~ĞîEä
-Bpcl‘Ä¾PJM„€ä­v¾kPükû0|^ º/ÁŠÇG‘FÁ[Š¦#@İ0”ÛÚEE2-·ÆŠV%…*jl?t<KæÜ1ÊmÒLJYÊİUÛ5³1;ï0&%SÔñÒŒá¦<®)^Q
-c™ŠDGÚ6
-BûëÃÿ™5Å|N7dh&\0bĞ2J­¢pí¡-Zª¶ò†Š ÓD›qÉìÎ2jå)~’ò¥8†µNCOÅ`(Åx³WTìb\?§2åı·¼Ã*›»q NeÆM(¹]/¶­9ØH»¤ ànyüŠP³‡/xF#ÏìPê@>
-c{‹Î/ÎZEjuA–Í!
-©es¨1@¡æÁ#±éÛs+É³ª‰ñËxŠRÑcém.ÅÚC
-T:¸†¹ §”e-#qI”,pºiÓ¤Dp*í–§ è¼&Slä¹+mÌ•±¯«ú@¯‰ˆ	ee²%Qè’—'!rFÕ8ÈÂÅjÅäí>:—0ÃÁ¬QÿÌ¥åÉD'56Ö<¬ùÈ§Ê‡š´ñq€:©1®Üí0°2>SĞ°ï›@G|âm¦áB¥®®dğ¤M{{GÒ3I®½@ö0"ü
-æÊZÌ~6•|…DhZIeİò4ÑÒ€åQ¥†v\óS5aç¹}R©–§ë¢tPÜ‹(]ÙUô$¶>¦w$s#çvîPfŸ²İ×AjØ´@…S**•³.&ê~åGq`Ú&Á¢£ ‡—¿FEõ.	¼p 7¼uÀÚ¦@hBÙq1¼U”@Ú.5§¼ôf•³³Èİj~„‡5¨#Ê¯0CÕ
-rà[™A)ÃBI)˜É8ÊË>[0æ-vŞÔÈN-Ö\HÛ²sÊææEEî+ó£‰F}¦¸µEBO":Ù~WÔÖWüÎÛœÛÏßŸ^œÌŸPÉh¯ğóJÖóZÕé#¿`ruçü	=—ÙÓØ1Õn¸8ï&6´MI„Füzöşê2¡³U²#Ôk5¤Ş$½Ê”âÙË(#­?]Xy3¨(Î ë2òí†y´0H}$©±ö×12}¹ßÆ½or.¨ó7ew”¬@DÚ½Fº8fœĞG :æ[ÈêøŞWu‹îAÕº·œ»”©u¶»îv§÷êfÿâÓ™ø‰[¶÷ûD›{E/¼ÖlºÖµ±Ç"Ozòn7~Ë$A”± =€=‚8âğ~gQ}qÂ#	$3¢¨Ä.:G:,¦òlç¿‹8øt4Ûä…³XŒTH½FŞ½Ö_lh Ë‹ì$äË{ÖnèRJ±™:Ú;m˜´ HZ°$¶[ìTÉrÚßÊ±s
-•~„e‘„îiwz›;¹²ÁÑŞ®Çì±[ŒÇ´“3àŒÎø ºÍX™B\¦òˆÚAøEo¼ä'8‹"x¯dˆÿ‘{Ò›qÙ=‚gu¥Ğ×jÕßa7e’o«º‡¶?øu&S¤‹öD©kş«»ó|V2ØşàªOüCàá=3éìmt˜IÍôuÚS|‡Pğ^CT7iïCïÿ7·âñö_ãñ6óø"Uñ9éí“¼ıƒé…ÜÜä0›Ù‰Í¯f/÷=ş:ãKxœ$=èvšıÔ%ìvÄGŸ"{	ëR÷^N¨YåFş½†‘–eÂ¦»%âı<'¯¾hÏB†c
-àÑíùA“Î€ıôéıêÚ‹¢g7DŠCÇí®¬ .e$Fô.¸äãÉÍv“+–ŞÏ¶”·è
-ïêÛŞó@ÛÅ”œ‹T1£øÅoË4ßDöuk"€”r¶Ì@&$ÔâôÙ+å{ÒólQ²ºvwíbJñJm^ÂàöC¶GŒq˜òÓöùÉÑ{Dx.Îsmx°|ÌÓ¦öÛËËó«#¤‘!(,L	auNï¸WĞ—œê² ëaØ½`Ñ]ÏõïÁKµ7]Ğ+OBíê-7* Ú§÷ªF¥¤¯$ò¯.~ş°x…ûã°8"ıx,—§ä0KÇ‹ '–ÉÉòàèpÚÕkJI=½')ÃÅ%wpuFï”.]a5
-¥Œì-­
-¸h^½xúD5A¡q«^–Ï!»-‹ğòvûŠºç‹MµöS
-ÑXôy…åû¾‹å\Ó~ìE„…Àj_NxlŸ{1µoÏ‰ƒsÛßKUBá-¨L]YœÎ,€C‡;x°”@ëF«	ç¼ôÑd·Æ>0óœf¢, Q“úì‰ã)Â	mÓ¡b¢ÏÓx‹&8Xú^cŒä¯â,^äèÎ ZXòzp=¦“'õ¹l=•FQq(˜ƒÿ}ˆ:Ÿ•qèEóXo©X¢c½¼HµÆXÑÉ zwü°lU;µèÒU€‡o 5KHQœ1P	ï ÒÙQÚlôj%ééô·Å»ÚJ|È®.£–F\Ø¹¢…ô²Îd]@‘wlá•¥ÑbÀåh1©…'¡nôCâ?ÁãuÚ@)zœ8u¤+o‚Òb@.“`:5îé5l2¤*áÑÛl4Vf…¸r–É´%ÉıMPY'^½è^Óò#½R¾Ôf„ã,Ä–6HPå:®¬UQ‹ÙçÈŒ3©´‹Ú9dxD6öì&9¿Wôö!µ&êX[n/Ôù¾=ñfPK\<GY„Q­GÉBãòµt&¦&'B½YŒ‡>k›ëéC:ÊtDÿ¯ç'#…õÒÛ¢:™L¬Fú9bnJ‡EŒ:ÏGÕ"¬Ò¤Z†­JFCÒ£p-'¬ğÙâzc"èöh±U´U‰#ö€bÃÏìŒjOl0dÂ^ËéD>@üxT‡™Ñ}<,ä×òĞ4Nü‚²C›ôŠG,r Ó¡Ÿİ’GZğ•À‘©6~
-0R–µÙÎï¿·?^\<€ÚB
-!aÀª’(
-0Ÿ•/uéÑ8dšŠà‡W³AtóÑh?ç(Ó1ò¨º wIÅ"Z¦H7 W~–Ìò%ÁZ>£LŒ)¾K6ÒäXŞqv‘ö.u:»={"?¿²Ó©kÙ*>Pö}80ñ‹epó†µ¸¿F¿<fİ%ğ²Û
-Kà%Sî^-DìzÑçª–Ä`q^n?óö•Œ«Xe¾;¦’¶˜vÅQùò"#ÌXv;‰s~vç„ÑrŸ¦³0Ç÷†Şı"Ş<ù
-í˜¾Q²4)XØ	_ÍÈ¹ı·ìÇ	ŸÌ&€[¥%»<¼¦Lt”¾ÀÔi°Œ©úµ©_ÿäNëQ ù·QÀ!…#Mc8D=÷~?Œ§‡9£ùÇ²†Ê‹éX,¼ìZÁ¿fù]{À‡N1ñÏ'"5L`¶Ê\§Qœ³hîÎáB*,¤7><m¾tÆÚÄÒJ¹Dÿmù{YH$úkO•>Á0:4¾ÙÿñøD—–…xDKù)xÍ èk˜İf¬¸Ğÿƒø‘G]bÔ²p}z‹¡¸c}›sÁá÷9\&.A˜ø)ÜE-$D6c¢ÎH£Îp½,œÈ`6¯Ÿ¾ />=‘'/Öúç¸|
--¢ÙÔ@Qj{ZÓ/G£â˜SÔJáñAP&¡ç qø‰óŸˆGf´Sûş§7O!)ÉÈáik@³„ì:l2CrºÈ.hgN:Ñt(i¢Çviï-évèªÒ´0ı××®zBß,r6
-;5¡b¹¸S&+-û
-b«ë|}B¶]Âo¿d¯vÉ<)øöKnÔ.¹œ¨	/İt‰¸Jï,¥ÑŞDıp71löïİZ^	.ì7
-ø“>Ë†vsVs?>hÔæc
-n{†H;M²ğšcpcwÄ§òLÒc(
->D%¦‚k~'G´2!ù~åwo#>_7àóÇ:¤#ş¯rzØ70ş2ÑIÊõe¿ò«ü Ş€UkÕ¢.å“’•ƒEï£QDßÛÒ£ğIÈŞé"Aw0Tüœß+OcÎxzwUì·ù[Òûüáğşÿ•RÁJÃ@½ç+†€$Óx®b)šbP0´9èi	ÉÔLgcv«ñßM¥XŠ÷²ËìÛ÷ŞÌÛ4­òU•¦A…ÖÁ°e&~&½®pº–"¾mi@+U6œâ¬Cv@ìpàºƒ5u¤éê¾(‹…P]Ízİ´†w‚´dXu¦n±#O%	| m ²¯ÔƒóúáuG³ğANÃèáÀ]_ÁìZ”ÅC~Ğù±§7-‰£
-ÆJyŒR	Là¶Xæ7ÕãòY­òr¾œËQªâ¤wÊ«J«ı„¸ş#®¨¼+³ùĞhzG‘{bR]i·éƒltÉáéüV‹ş‚s:‚Ñˆ™ığ|ZÃ(¥q:ùS)4>œfÙÉãŒ¸Å6F×¾±`Q;‰qlg
-ù~ÙØm£}¶Y‰ßÉ'ğ%	ŸNxBú»3†¡#F9~¥Ë
-Â0E÷~E…DğñjµhEA±T7®†Ø&¨i­úùFâ{ã"0d.ç\¦ÙÎdV2¸-”AHu‚„Fƒ¨˜Dª=Ö»yššMÑÆÜ˜k¾Ä[.‘BfŸæd ıá((—%/¹I‹h<‹ ‡ §bTiG™¦’_p’›+„>Úí†ú ¬ú\ˆ¾Zã]û®'5ÒÆaw6‰ç0
-£ ìhi»ßI_k<¹v|‘mğ.ùîøX¿SèµÒ+æ)gÅâÃeÜqÿ–y‹ª/ŠMÆìÜöORQk1~÷¯ĞÃw°Kú°§k·Pº„’@[Æ0&VjÓ‹|µŒı÷É—44”B7?é“¾ï“TUËf±¬*±Ä˜ l‰=‚†agu€d5ñyëF’§
+h„.ìÑ˜]EãíNz¡#ÕœuZ@WéV×e=§¶ûU#-4IÅµ4Ÿâv¥Bàs3Åş¯;ú~éÒT\‘~kÈ„A6pT¸C=µ$^ÂjSÎ‹Yè­FÌBÿje”‹Y©w…hÁz¬Üî¶‚DfÚ‰µ4MÔ'ccÔk»™Ë´œe6a!Ú~°™|`HØÙš^{­<Ï} VŠôşo´XK¯3n)©eº5±1öe Ò´ëïÒ€eF¿ĞºÃ³•QÁJÃ@½ç+†€$ÓznÅR4… `is°§%$Sw0»[,ˆÿîlªE)ÜK–—·ï½™—çU±®ò<ªĞy°{fâg¨aÔëÚ‚×µ€øº'‹NP6œãœGö@ìÑrİÁ–:Œò|}_.Ë…H]ÏzİG´…ÂtdXu¦n±M“ ›d¼G m q/ÔƒşámGwğF^Ãá¤‘L£hv#N‹ò¡8ù|ÅS†„–$ÑS¥G©FpW®ŠÛêqµQëb9_Íå*¨$é½
+®2j?"nDŸ˜”CŸ&Úï:…Öë’K¸Ê¦ß6ÿqø™,ù‹6ìáuX½„9.'$tĞF†é‹§¥È„Eâd<>{<&nñ Ñu.ZÔ^jÆ™@qüÄlÜ¾Ñ¡»À‰œÔë¥ä I¹ÇíÇgâqøwáÀ0tÄ(×O¥ÁŠÂ0†ï>E…DXõt«Å­((–®—=
+±LPÓ[Ÿ~§»UÔ®^ö~~¾o2½~¦³†Ã]aBjd<GÀ%Ú°3t(óÔµ©Å»/z3iå
+/½D+ã=+·( F“iĞlv^òdïÌâ‘*T*ÁUxÒiªåîñ[/eÒ•áêÌo€-_*52¼jëzÖf“8.æñ|†Q4RÊsÜçPY.Ò‡5î\{yÀˆö¨K;êŸ ä °c×Â+)¥bùÇeªãş[æ-[¾*¶™ ¹ïRQk1~÷¯ĞÃw°Kú°§k·Pº„’@[Æ0&VjÓ‹|µŒı÷É—44”B7?é“¾ï“TUËf±¬*±Ä˜ l‰=‚†agu€d5ñyëF’§
 w.&¤Ò-¬]‹ğ³/À§¢óôKTÕâz:›N¸÷Å¸³pk(>ªõÚ )d®“e	¿ğÃ•õ ã“ë eE„h"œö–çâg†Éô¦9ö?èTVÆ±´
 JeŒR%áÇtŞ\-oçjÑÌ.ç—üå(è’Êdì¹:ZqGNEL…´iÓ*Á‡(¿ÀYyşBó/¯•É÷`½ıh¿³ŸIVÁxBõî›û·ÉÎÀz4zS<rdpg½·:›w:äıÖğY¼[M>nW6¯7W—5¬5ÿ
 $¾C‚˜êM}XOR
 ƒÓ¢¸Èg“øxú3q´GŞ°
 ^r0 u„ğUˆ‰N|ƒö_,x²œÕæ»>¤
-Èz–PğA´[ƒªÓÉ~“Ÿ£,ÿOè_•M‚@†ïıŠ=*”Kç>DLIZ¬K§aq\¨ÕÖÕúù-ºPºÍÌûÌÃÌ*jªfB©Æ['5B­J$Û1ë²’=†6÷–_„ÁÖØˆk›ıÜ¥‰FnjíÓrlÉš(¼‚Á¾'•ÀÇÀÏˆÑ¯µù†‘ÉúBjÅ¯èdù>HH¶y‘&§Cq†cÊâ"¶¥w.œïMş¡myÌ¾ò¯wüßª¢ÍÅ•ooÚ0ÆßçSœªI	 ƒMƒ¡6UQ§-&m¯¢,\ˆÕ`§¡¦~÷Í¿’)ŒíÅ†„”Ø÷üîñÙ¾¸îÌŸÎ\×ša¡ @¼g|4ò4’P(‰ÑÒrİéİ8ßPØ`˜§¹ÅpÖ(&x‹eIth|;äÔê`w^Ã³éa`×jğÃúaœ
-°‹{–Ew]Á³ï (±İ·
-ŸrƒÍD4Ç¹ck†ğR­5À…“\±oÂ#S)×{ˆİ‡gkxIşoÆü½{‰+&1<F˜3É£%:a¨cÂ°
-¸Oü«Ù§É×pê£Éˆi”¬ä*Ô©©8yƒñ˜l±ìà6hdœ²5ê˜ÃüŸ¤É_$,CoW…™zšP½d³[”í%]q¦à=p|„ÀMBò¤÷ÖQr…5
-IršMD|SÜwÍæ¦©Wø/ş¦Bt@h{ÎİË¨(P*ÿae…ãÕ!Q˜eÙÖ§*ar{LÁ;!³C"'txçZY‡öA¬µ4Ñ”Íl§šÔ)(0|¾qĞ9åÀ¬­ì`«ŞY¨ĞvK9#z£»x¬}aŸŠ4õı»Ğÿx]
-}ı¦DU)“Û…x{}‰ì¶ÎB÷Ê»$V’.£a»­Jxï/é,ÙÃ{­ßZ¿ú<9/×º`Oeç(±ÛŞ9ìŞ/l\#ßÑÛ^ı¼ª¼-Á‘-Ò»T”8š¸¾µi¢úú0©i˜é	¨ÉP‹üï-¾9ô	rº5¸Hi}âÂ:¸ı	ÅTÿ‹Ó0ÿ=ÅóšÀÚu;w¢›q×Ãq¢¥› ˆ„Ú¾ŞÂuIl»S‘ûß}iÇy…Í´P’|Şç}‰ï¯£ÕÚ÷ÙëjÄ¥¯!…ÀnÒ
+Èz–PğA´[ƒªÓÉ~“Ÿ£,ÿOè_Å•ßo›@Çßù+¬j …„¤M–¬QÔR-ê´¡$“¶'ÄÀ„SÉ=.m§©ÿû|—_-Y¶‡
+		ûã¯í;ãy‹`¾ğ<k•‚
+ññ%ÄĞ.óXB¥$Æ+Ëóæ·ÓpzCf£q™—ËÀy@Y1Á£D¬ÊX¢CëÛ%Çmİoûmß¦‡‘íºğÃº0ÉØÕ+¬ûàÅwPØZÏŠO
+¹Á"N1ul­Ã^zkàB	®Ø·á‘©Œê=ÄÂ³5¾$ı7ÓÁ^½Äû5“	 ¤Lòx…Ni›(r¡
+×ÓYpµø4ûÍƒp2›Ğ#­’”RE:4§l3ì-ëO0…àËŒ¨íí&3S/cªS2İ ho(ğš3ï€ã#„Ád…ïCİ;GÉ5ºd’•ô5%òMñŞv:¯0Á¿¸u•ô ö”{—qU¡TÁı:.*ÇoA¦°(’­wMÆäv‚ÄÍ‰œÑæLµgzg½¨]3MÙ|=o&×T˜nœS`r«+Øzï$4øök1cz£³öÚ÷…|*Ò<n£àãu3ô¢‰Ê™Ü&âïıkd¯{ºWï’XK:l†íuáƒ¿¤³lt+ıêóì¼[ï/{ª+'@İóOa~aãò½ç7ÑO«ÊE
+l™ïØµ¢$…¨ĞØ
+­ÍÔÇ¯‚Tp¤¡a`ğ%¤!C#ğ¿ú§Ğ/Æé»p–S~âÌ:¨ı	ÅTÿ‹Ó0ÿ=ÅóšÀÚu;w¢›q×Ãq¢¥› ˆ„Ú¾ŞÂuIl»S‘ûß}iÇy…Í´P’|Şç}‰ï¯£ÕÚ÷ÙëjÄ¥¯!…ÀnÒ
 ê¦ÂtÛ~kP×ÊèOÌ÷WWËxyIz³¹İX¦
 à·X9©ÌÌÖ¦rÂ÷ğ&A„mfğƒ}˜mxõ²@ì‰otùŠÄ›²»Öè£{¯²4i9÷\0­‰‡êN	4b^C?Xo
 wlş’B¾\¾î®ğËNU(ÎrUét‹\JÇ‘R@ Ë$:_¿M>ÈU/’m	%ç¶‘ÎÈJgéŞÖ1fJ£¯U¢ã{¢µ%j©.¥¶#äí19ŞiÕÀÊ÷+ÄÑ"‘ñ«Øõ7ÕQ
-KÒÂXÔ]¹‡=3C—Á¿ø]•\Ï©aSv›V2ßm-/,KNQŠJ³–;t c'(Ü4vçÓãµO`3À*Š®dôæâº?:’6úKçï’Cøãğ8şAád¥©±=MYw»\kÈFš½öEïcšUºIÿ}²èy¢×ŠOœl(sÂ”nx(Ø^0&ÁlŞ¡§=tc;t"ÚåÉÓız&ØgcJ^¤eı½“õ±_Åù	ÅTQkÛ0~÷¯8J@Ô‰Ó4m·¶)asiØ`&ÉÃÆFµ•XD‘\IIÓş÷”àÄĞ=ìe3¾;ß¾»ïä(š%ÓY3f,K­årT‚ª˜„NUR
-s.”T‚Q4ı4NÇ÷˜rsW•UÀçn˜6\É,W«Šj¢ï
-Û§@¸7¤İ†_àÃòR1K^F"%ÅX$A®ƒW_”m-“¾¬P´`EH_á8Ûå@®ä\ğÜxæ¶ÏºÎ'×ğÜ
-‘úıøsR×ìiÍ5Ë”Ì\Kºba–¹˜,kC>'É‡Ù—É·lš¤£É!z‘Ee3w*§êp™#ãF-’>¤İ‘ÎK¾a.æğıoJ.Üà]<ùS˜¥u-{µğ´Ö¼‚[˜;wC{ßí6bºş¿x}û(<Ê†´ĞXKn‘›dÏ&£I†£r›Z½f.dëˆ»5±‰£œhHaÚ&Ok*LHµ¦/bû1Ü!>EÔ«Ñ™Cı~|á­~í?¯Ñ F5ºtèüÒÁ+[ÛïW?œõ®aõâ¦ézŸ0)Ø†Ôµ	—êÈZ©‚‘I"—Ë£5/¬EÃÒÍÚ†ÿÜUÛ‘'ÔòÕÎQ³$«7|ù¾G±¬Ëíy*_šÚƒºµEIHNÕy.”a{¹v÷Ò)o P’á2ú‹—|Mqyñêı÷m4Vã.´á¤dB¨“àÀö7ÅTQoÚ0~Ï¯¸UHR	J×–
-m©†6iğ°©ª¢41`ìÔ6İÔÿ¾»ÀBÑº‡½l‘¢|÷ù|÷ùîÏ›EÓ™ç93n,›Z+äR	ªäZå2Õ0‡e*süÜVßZ.PòÎñ¼éÇq<¾Á—×å²tÄÜG®i5ÉÔºL5w‘ßSnóXØò[>CpÉšMøá ><[*`f%J@ïĞS²x‹ªØ…ó\}SgM
-•æ<w‰©B¼ÜN›@r8Ë.àÙ¹¢ä›ñ§¨¬ùÃFh(™qÈ…–éš»IB>IÒ„¼O¢w³Ï“¯É4ŠG“Bd1yiJ†U*[Bf¨tëoÂJ.¨ÂäÏşäV•¨r¥#UmÁly	W0§Víjñ¶İ>òi“¼ñR	¨¡Ø
-”…ÆF
-‹Ú$ÿq4š$ñ‡˜FÌµzÃÉeKÂiŞ\<Ä‹=Ş05†k=lÒÂ¸©Öé¸x|®†tN½Áyô{]?$ªCT·ë÷}²º•/¡¡ŠkÔ¯¶WËg{gÛÛÁYçGVà›Á!BĞ9`–óGvÉ„Tìw©l­rÎô2Y¹bµj¶9«õ²Å‘¥eÙ'5âû.Üî,µb½#jÁlı
-—½Âİ«:Ü>ü}¡²•©¼¾-6šZG½g…2|ßÄİ%¤y0+ÉqD«ë}‰q¤ñÂı÷5VãÿÍ
-›p²äE¡NœƒÚŸ³±/È(àâJMÎÈWˆwóôq·æâ*J-,Í,JUP/ÈH,²Ò×/I-.‰±õ@„[”Ÿ_ä¨[Ã´ûxúµ+è)(Åä)a1¥¸4)%ªÂÆ¦¨ÑŞ ³±/È(àâJMÎÈWˆwóôq·æ*K,ŠO)Í-ĞPÏHÍÉÉW×´æ²· ³±/È(àJMÎÈWPòHÍÉÉWÏ/ÊIQT²†ÆÇ»yú¸ÆÇ[sÙÛ ³±/È(àâJMÎÈWˆwóôq·æ*J-,Í,JÏÏKNUP/ÈH,²Ò×GÔ‰éçå—&g¤eæ€øêÖ\öv ³±/È(PPğˆwröğs÷putq
+KÒÂXÔ]¹‡=3C—Á¿ø]•\Ï©aSv›V2ßm-/,KNQŠJ³–;t c'(Ü4vçÓãµO`3À*Š®dôæâº?:’6úKçï’Cøãğ8şAád¥©±=MYw»\kÈFš½öEïcšUºIÿ}²èy¢×ŠOœl(sÂ”nx(Ø^0&ÁlŞ¡§=tc;t"ÚåÉÓız&ØgcJ^¤eı½“õ±_Åù	ÅTQkÛ0~÷¯8J@Ô‰Ó4]·¶)asYØ`&ÉÃÆÆ³åXD‘\IiÓş÷İ9™C÷°—-ø¾»Ó§»“ƒ`ÍAà-¸u`]êœPKHèŠ+èUej ’C™ª\r/æ¦ñôS®o«²òDş7Vh•dz]¥†û¨ï%¿{
+lÔ{!CpÍº]øéşxVj`v%*ÀèQ •|‡&Ø•÷\å[ÇU]Vê4ç¹ÏÈL]á8›r Óª"s…+¡vİä³+xönÇhınú1jŒ~¿†'ZeraTºæ~’PL’t¡ï¦³èíâÓìK2âÉl‚UtQ¹„NÅæT=¡2t¼¯õ7e¤VKj,Å³?…Õ­ªCéJõ4ğ´NQÁ
+4¡]SŞôû­˜>Ùûj
+Ç‚¶l”pèMñGˆ£É,‰ßÇ´Y¾3N![2Nkæã%r‚qj-7.ºß¤Òú©1éøxınÆ"4èŒĞp^ÔlØèç
+5è¢A¯	^ìl¿^~#öºÅa›œ5åü˜Púˆ­uÎYË"SR¨ÕQÈFäGlÙb¦]ÛŠ»j;ë,ub½lı‚–½ }—«¦\¸Wt¶²¿|¬-“D-2©-ßj÷æhêr­8.bı¨¢Ï1..>«ÿ¾‰Öüxù£.œ”\J}âÜşÅTMoÚ@½ûWL#¤5R6`Jš„µŠZ©phE–k/°Âì:»&!­òß;c«é¡—Öò›çÙ™7‹ã,‚ùÂq¬7˜".
+!WKP9—ĞÉ×±†¥È8¬c™âë¦dø¾àÒ%o-Ç™š†ÓkŒqq•¯sK,Á¾çš¾F‰Úæ±æ6òÊnŸó;nÇe.X»
+?-À‡'kÌlDèí;JfP *vn=•AßÔY£LÅ)OmFbÊ/Ó!œ§šbÙ9<YWc”|=ıÔ‚5¿Û	Í#%©Ğ2Şr;ŠÈ'ŠÚĞÓYğ~ñeö-šád6Aˆ,&Ï‹ˆ’a—ò	*=Äú›0™’+ê0ù³?¹•-*]©¤r,˜­µÌá–4ªªïºİ†O—äı‹µ€ŠÓ@Yhì¤(P›ä“Y~iÅìBï8¹ìI8í›E¼8ãŒcc¸.‚»]œ;Ö:~Ëwár^ï¡GĞùŞpĞw}¢zDõûîĞ%«_ú*9¿FÃòxùù-ÁAŸàˆ`k3º%ë¬aynÓôêX^¯†,å÷ì(’	©ØïBÙV¥œ5Ô2™	¹aµf¶);†]5,ıœ¥*€ñ£
+WUÁâBl+¢–Ë¶¯pÉ+Ü÷lS‡sŒJ6æ™À«ÛÚãil4çe’)Ã¬. í‚TIëY^µàkˆëŒ—í¿ï§)4ş·Ù~NÖ<ËÔ‰uTû³±/È(PPğˆwröğs÷putq
 Ò5Ğ3Ö3ĞÊ2P
 @À@;
 &&F
