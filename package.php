@@ -2,10 +2,13 @@
 require_once 'PEAR/PackageFileManager.php';
 require_once 'PEAR/PackageFileManager2.php';
 PEAR::setErrorHAndling(PEAR_ERROR_DIE);
-$version = '0.11.1';
+$version = '0.11.2';
 $apiversion = '1.0.0';
 $notes = '
-Remove potential notice in directory rewind()';
+major bugfix release
+* fix Bug #11858: seek to SEEK_END fails
+* fix Bug #11859: mapPhar fails for all phars internally loaded
+* fix Bug #11860: missing constant in PHP_Archive_Exception UNKNOWNSIG';
 
 
 $package = PEAR_PackageFileManager2::importOptions(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'package.xml',
