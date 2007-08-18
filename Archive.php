@@ -384,7 +384,8 @@ class PHP_Archive
     public static final function mapPhar($alias = NULL, $dataoffset = NULL)
     {
         try {
-            $file = __FILE__;
+            $trace = debug_backtrace();
+            $file = $trace[0]['file'];
             // this ensures that this is safe
             if (!in_array($file, get_included_files())) {
                 die('SECURITY ERROR: PHP_Archive::mapPhar can only be called from within ' .
