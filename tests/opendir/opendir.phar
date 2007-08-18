@@ -23,7 +23,7 @@ if (!class_exists('PHP_Archive')) {/**
  * @author Davey Shafik <davey@synapticmedia.net>
  * @author Greg Beaver <cellog@php.net>
  * @link http://www.synapticmedia.net Synaptic Media
- * @version Id: Archive.php,v 1.49 2007/06/06 04:16:10 cellog Exp $
+ * @version Id: Archive.php,v 1.50 2007/08/18 04:59:00 cellog Exp $
  * @package PHP_Archive
  * @category PHP
  */
@@ -383,12 +383,13 @@ class PHP_Archive
      * Any attempt to call from outside the .phar or to re-alias the .phar will fail
      * as a security measure.
      * @param string $alias
-     * @param int $dataoffset the value of 38854                   
+     * @param int $dataoffset the value of 38903                   
      */
     public static final function mapPhar($alias = NULL, $dataoffset = NULL)
     {
         try {
-            $file = __FILE__;
+            $trace = debug_backtrace();
+            $file = $trace[0]['file'];
             // this ensures that this is safe
             if (!in_array($file, get_included_files())) {
                 die('SECURITY ERROR: PHP_Archive::mapPhar can only be called from within ' .
@@ -1113,7 +1114,7 @@ class PHP_Archive
     }
 }}
 if (!class_exists('Phar')) {
-    PHP_Archive::mapPhar(null, 38854                   );
+    PHP_Archive::mapPhar(null, 38903                   );
 } else {
     try {
         Phar::mapPhar();
@@ -1129,10 +1130,10 @@ if (class_exists('PHP_Archive') && !in_array('phar', stream_get_wrappers())) {
 
 
 require_once 'phar://opendir.phar/indexhooha.php';
-__HALT_COMPILER();p           opendir.phar       eof.phptñ  {|ÆFŠ  N€zam         filenotfound.phptë  {|ÆF9  ùO'm      )   filenotfound/makefilenotfoundphar.php.incï  {|ÆFÜ   
-ºm         filenotfound_phar.phptI  {|ÆFV  Cøoæm         gopearphar.php.inc)  {|ÆF¯  Œ[ÁQm         indexhooha.php+   {|ÆF-   pWûm         longfilename.phptÎ  {|ÆFŞ   }2vm      !   longfilename/makelongphar.php.inc™  {|ÆFÓ   ,ª²Õm         makepearphar.php.incã  {|ÆF
-   fîóm         normalstat.phpt·  {|ÆFğ  ®æ*m         normalstat_phar.phptß  {|ÆF  ‰šæum         opendir.phpt}	  {|ÆF-  è|‚~m         opendir/makeopendirphar.php.inc  {|ÆFÍ  åÂå m         phpt_test.php.incw$  {|ÆF¼  *æ£^m         planet_php/default_phar.phpĞ  {|ÆF1  *óÓüm         require_once.phptD  {|ÆFF  ?~—m      )   require_once/makerequire_oncephar.php.incû  {|ÆFá   ßİvm         require_once_phar.phptj  {|ÆF  ã˜Aüm      	   seek.phpt  {|ÆF+  Âª…m         seek_phar.phptH  {|ÆFÜ  2³(dm         streamstat.phpté  {|ÆF
-  üGám         streamstat_phar.phpt  {|ÆF&  w†m         test_tar.tar   {|ÆFİ   µBê'm      ÍSMk1½ëW¡ 	²k›Ö—æÃ˜fCL]lÒ“Ø¬G¶ÈZR¤uJúß;’MBôÒfA Í>½™7óTËj±,
+__HALT_COMPILER();p           opendir.phar       eof.phptñ  ŸÇFŠ  N€zam         filenotfound.phptë  ŸÇF9  ùO'm      )   filenotfound/makefilenotfoundphar.php.incï  ŸÇFÜ   
+ºm         filenotfound_phar.phptI  ŸÇFV  Cøoæm         gopearphar.php.inc)  ŸÇF¯  Œ[ÁQm         indexhooha.php+   ŸÇF-   pWûm         longfilename.phptÎ  ŸÇFŞ   }2vm      !   longfilename/makelongphar.php.inc™  ŸÇFÓ   ,ª²Õm         makepearphar.php.incã  ŸÇF
+   fîóm         normalstat.phpt·  ŸÇFğ  ®æ*m         normalstat_phar.phptß  ŸÇF  ‰šæum         opendir.phpt}	  ŸÇF-  è|‚~m         opendir/makeopendirphar.php.inc  ŸÇFÍ  åÂå m         phpt_test.php.incw$  ŸÇF¼  *æ£^m         planet_php/default_phar.phpĞ  ŸÇF1  *óÓüm         require_once.phptD  ŸÇFF  ?~—m      )   require_once/makerequire_oncephar.php.incû  ŸÇFá   ßİvm         require_once_phar.phptj  ŸÇF  ã˜Aüm      	   seek.phpt  ŸÇF+  Âª…m         seek_phar.phptH  ŸÇFÜ  2³(dm         streamstat.phpté  ŸÇF
+  üGám         streamstat_phar.phpt  ŸÇF&  w†m         test_tar.tar   ŸÇFİ   µBê'm      ÍSMk1½ëW¡ 	²k›Ö—æÃ˜fCL]lÒ“Ø¬G¶ÈZR¤uJúß;’MBôÒfA Í>½™7óTËj±,
 ¶ÄØCD¼5v
 
 ”~Óˆ}ÀfËŠbñuVÏ.	v:ñÏŒq!gUë¶¾	((~	y|\ÊáÍˆÓö”K	OèÃvã€Ç[ãğãÂÙîzJÍOØ/69§T—³oÕs¢€w;P9Û"¬L°Í…R	£”„.fóêËòûü‡ZTõt>¥-E9İíUâ%¾4¶%ş×ßĞtÎ®µé0áùk°,,CSÏrã(ÛJ¼³¦‡3°øêj:WõUÚ,ú°CIíé¯v­àéÚçÁàšARğ/VêRšTàTÖ}Ôj·õB£Ó‚Š¤qê».ï	 “MÒâÔœhñ=ÔŸK#¿®ö¥†oÒÒv.b>°½;a„•³HcÌ–¬®k;™ò¿‹¤IïSŒ%mH…;b7ÎuB7]DÉŒíÅPîCÙc9òé£d/š~u‘ßKÃ0ÇßóW¥Ö=øhÕ1fEÁÑöAAe½Úà–Ô$Eeì÷ÒÁ†ˆy

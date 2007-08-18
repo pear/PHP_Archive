@@ -23,7 +23,7 @@
   <active>no</active>
  </lead>
  <date>2007-08-18</date>
- <time>00:07:12</time>
+ <time>12:07:51</time>
  <version>
   <release>0.11.2</release>
   <api>1.0.0</api>
@@ -35,6 +35,7 @@
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
 major bugfix release
+* fix 64-bit/32-bit compatibility of phars (Brian Shire)
 * fix Bug #11858: seek to SEEK_END fails
 * fix Bug #11859: mapPhar fails for all phars internally loaded
 * fix Bug #11860: missing constant in PHP_Archive_Exception UNKNOWNSIG</notes>
@@ -78,6 +79,7 @@ major bugfix release
     <file name="gopearphar.php.inc" role="test" />
     <file name="longfilename.phpt" role="test" />
     <file name="makepearphar.php.inc" role="test" />
+    <file name="maketestphars.php.inc" role="test" />
     <file name="new_phar.phar" role="test" />
     <file name="normalstat.phpt" role="test" />
     <file name="normalstat_phar.phpt" role="test" />
@@ -99,6 +101,7 @@ major bugfix release
     <file name="test_phar2.phar" role="test" />
     <file name="test_require.php" role="test" />
     <file name="test_tar.tar" role="test" />
+    <file name="twophars.phpt" role="test" />
    </dir> <!-- /tests -->
    <file name="Archive.php" role="php">
     <tasks:replace from="@API-VER@" to="api-version" type="package-info" />
@@ -135,6 +138,7 @@ major bugfix release
    <license uri="http://www.php.net/license">PHP License</license>
    <notes>
 major bugfix release
+* fix 64-bit/32-bit compatibility of phars (Brian Shire)
 * fix Bug #11858: seek to SEEK_END fails
 * fix Bug #11859: mapPhar fails for all phars internally loaded
 * fix Bug #11860: missing constant in PHP_Archive_Exception UNKNOWNSIG</notes>

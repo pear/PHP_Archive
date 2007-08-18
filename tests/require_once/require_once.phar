@@ -23,7 +23,7 @@ if (!class_exists('PHP_Archive')) {/**
  * @author Davey Shafik <davey@synapticmedia.net>
  * @author Greg Beaver <cellog@php.net>
  * @link http://www.synapticmedia.net Synaptic Media
- * @version Id: Archive.php,v 1.49 2007/06/06 04:16:10 cellog Exp $
+ * @version Id: Archive.php,v 1.50 2007/08/18 04:59:00 cellog Exp $
  * @package PHP_Archive
  * @category PHP
  */
@@ -383,12 +383,13 @@ class PHP_Archive
      * Any attempt to call from outside the .phar or to re-alias the .phar will fail
      * as a security measure.
      * @param string $alias
-     * @param int $dataoffset the value of 38899                   
+     * @param int $dataoffset the value of 38948                   
      */
     public static final function mapPhar($alias = NULL, $dataoffset = NULL)
     {
         try {
-            $file = __FILE__;
+            $trace = debug_backtrace();
+            $file = $trace[0]['file'];
             // this ensures that this is safe
             if (!in_array($file, get_included_files())) {
                 die('SECURITY ERROR: PHP_Archive::mapPhar can only be called from within ' .
@@ -1113,7 +1114,7 @@ class PHP_Archive
     }
 }}
 if (!class_exists('Phar')) {
-    PHP_Archive::mapPhar(null, 38899                   );
+    PHP_Archive::mapPhar(null, 38948                   );
 } else {
     try {
         Phar::mapPhar();
@@ -1129,4 +1130,4 @@ if (class_exists('PHP_Archive') && !in_array('phar', stream_get_wrappers())) {
 
 
 require_once 'phar://require_once.phar/indexhooha.php';
-__HALT_COMPILER();M            require_once.phar       indexhooha.phpP   €|ÆFC   óá´	m      ³±/È(àâJMÎÈWˆwóôq·æ*J-,Í,JÏÏKNUP/ÈH,²Ò×GÔ‰éçå—&g¤eæ€øêÖ\öv 
+__HALT_COMPILER();M            require_once.phar       indexhooha.phpP   ŸÇFC   óá´	m      ³±/È(àâJMÎÈWˆwóôq·æ*J-,Í,JÏÏKNUP/ÈH,²Ò×GÔ‰éçå—&g¤eæ€øêÖ\öv 
