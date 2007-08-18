@@ -33,6 +33,7 @@ class PHP_Archive_ExceptionExtended extends PHP_Archive_Exception
     const FILECORRUPTEDCRC = 13;
     const NOSIGNATUREMAGIC = 14;
     const BADSIGNATURE = 15;
+    const UNKNOWNSIGTYPE = 16;
     private static $_messages = array(
         'en' => array(
             self::NOOPEN => 'Cannot open "%archive%"',

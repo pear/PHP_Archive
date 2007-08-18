@@ -328,7 +328,10 @@ class PHP_Archive
     private static final function _endOfStubLength($buffer)
     {
         $pos = 0;
-        if (($buffer[0] == ' ' || $buffer[0] == "\n") && substr($buffer, 1, 2) == '?>')
+        if (!strlen($buffer)) {
+            return $pos;
+        }
+        if (($buffer[0] == ' ' || $buffer[0] == "\n") && @substr($buffer, 1, 2) == '?>')
         {
             $pos += 3;
             if ($buffer[$pos] == "\r" && $buffer[$pos+1] == "\n") {
@@ -387,16 +390,16 @@ class PHP_Archive
                 die('SECURITY ERROR: PHP_Archive::mapPhar can only be called from within ' .
                     'the phar that initiates it');
             }
+            $file = realpath($file);
             if (!isset($dataoffset)) {
                 $dataoffset = constant('__COMPILER_HALT_OFFSET'.'__');
+                $fp = fopen($file, 'rb');
+                fseek($fp, $dataoffset, SEEK_SET);
+                $dataoffset = $dataoffset + self::_endOfStubLength(fread($fp, 5));
+                fclose($fp);
             }
-            $file = realpath($file);
 
-            $fp = fopen($file, 'rb');
-            fseek($fp, $dataoffset, SEEK_SET);
-            $pos = $dataoffset + self::_endOfStubLength(fread($fp, 5));
-            fclose($fp);
-            self::_mapPhar($file, $pos);
+            self::_mapPhar($file, $dataoffset);
         } catch (Exception $e) {
             die($e->getMessage());
         }
@@ -853,6 +856,7 @@ class PHP_Archive
                     return false;
                 }
                 $this->position = $pos + $this->currentStat[7];
+                break;
             default:
                 return false;
         }
