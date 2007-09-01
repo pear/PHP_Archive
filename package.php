@@ -2,14 +2,11 @@
 require_once 'PEAR/PackageFileManager.php';
 require_once 'PEAR/PackageFileManager2.php';
 PEAR::setErrorHAndling(PEAR_ERROR_DIE);
-$version = '0.11.2';
+$version = '0.11.3';
 $apiversion = '1.0.0';
 $notes = '
-major bugfix release
-* fix 64-bit/32-bit compatibility of phars (Brian Shire)
-* fix Bug #11858: seek to SEEK_END fails
-* fix Bug #11859: mapPhar fails for all phars internally loaded
-* fix Bug #11860: missing constant in PHP_Archive_Exception UNKNOWNSIG';
+minor bugfix release
+* introspection cannot use exit within stream wrapper, PHP destabilizes, this is fixed';
 
 
 $package = PEAR_PackageFileManager2::importOptions(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'package.xml',

@@ -23,7 +23,7 @@ if (!class_exists('PHP_Archive')) {/**
  * @author Davey Shafik <davey@synapticmedia.net>
  * @author Greg Beaver <cellog@php.net>
  * @link http://www.synapticmedia.net Synaptic Media
- * @version Id: Archive.php,v 1.50 2007/08/18 04:59:00 cellog Exp $
+ * @version Id: Archive.php,v 1.51 2007/08/18 15:30:07 cellog Exp $
  * @package PHP_Archive
  * @category PHP
  */
@@ -187,7 +187,7 @@ class PHP_Archive
         // security, idea borrowed from PHK
         if (!file_exists($archive . '.introspect')) {
             header("HTTP/1.0 404 Not Found");
-            exit;
+            return false;
         }
         if (self::_fileExists($archive, $_GET['viewsource'])) {
             $source = highlight_file('phar://longphar.phar/' .
@@ -204,10 +204,10 @@ class PHP_Archive
                     '">Return to ', htmlspecialchars($_GET['introspect']), '</a><br />';
             }
             echo $source;
-            exit;
+            return false;
         } else {
             header("HTTP/1.0 404 Not Found");
-            exit;
+            return false;
         }
         
     }
@@ -217,7 +217,7 @@ class PHP_Archive
         // security, idea borrowed from PHK
         if (!file_exists($archive . '.introspect')) {
             header("HTTP/1.0 404 Not Found");
-            exit;
+            return false;
         }
         if (!$dir) {
             $dir = '/';
@@ -253,14 +253,14 @@ class PHP_Archive
                         htmlspecialchars($entry->getFilename()), '</a></li>';
                 }
             }
-            exit;
+            return false;
         } catch (Exception $e) {
             echo '<html><head><title>Directory not found: ',
                 htmlspecialchars($dir), '</title></head>',
                 '<body><h1>Directory not found: ', htmlspecialchars($dir), '</h1>',
                 '<p>Try <a href="', htmlspecialchars($_SERVER['PHP_SELF']), '?introspect=/">',
                 'This link</a></p></body></html>';
-            exit;
+            return false;
         }
     }
 
@@ -272,21 +272,21 @@ class PHP_Archive
             $subpath = str_replace('/' . basename($archive), '', $uri['path']);
             if (!$subpath || $subpath == '/') {
                 if (isset($_GET['viewsource'])) {
-                    self::viewSource($archive, $_GET['viewsource']);
+                    return self::viewSource($archive, $_GET['viewsource']);
                 }
                 if (isset($_GET['introspect'])) {
-                    self::introspect($archive, $_GET['introspect']);
+                    return self::introspect($archive, $_GET['introspect']);
                 }
                 $subpath = '/' . $initfile;
             }
             if (!self::_fileExists($archive, substr($subpath, 1))) {
                 header("HTTP/1.0 404 Not Found");
-                exit;
+                return false;
             }
             foreach (self::$deny as $pattern) {
                 if (preg_match($pattern, $subpath)) {
                     header("HTTP/1.0 404 Not Found");
-                    exit;
+                    return false;
                 }
             }
             $inf = pathinfo(basename($subpath));
@@ -295,31 +295,30 @@ class PHP_Archive
                 header('Content-Length: ' .
                     self::_filesize($archive, substr($subpath, 1)));
                 readfile('phar://longphar.phar' . $subpath);
-                exit;
+                return false;
             }
             if (isset(self::$defaultphp[$inf['extension']])) {
                 include 'phar://longphar.phar' . $subpath;
-                exit;
+                return false;
             }
             if (isset(self::$defaultmimes[$inf['extension']])) {
                 header('Content-Type: ' . self::$defaultmimes[$inf['extension']]);
                 header('Content-Length: ' .
                     self::_filesize($archive, substr($subpath, 1)));
                 readfile('phar://longphar.phar' . $subpath);
-                exit;
+                return false;
             }
             if (isset(self::$defaultphps[$inf['extension']])) {
                 header('Content-Type: text/html');
                 $c = highlight_file('phar://longphar.phar' . $subpath, true);
                 header('Content-Length: ' . strlen($c));
                 echo $c;
-                exit;
+                return false;
             }
             header('Content-Type: text/plain');
             header('Content-Length: ' .
                     self::_filesize($archive, substr($subpath, 1)));
             readfile('phar://longphar.phar' . $subpath);
-            exit;
         }
     }
 
@@ -383,7 +382,7 @@ class PHP_Archive
      * Any attempt to call from outside the .phar or to re-alias the .phar will fail
      * as a security measure.
      * @param string $alias
-     * @param int $dataoffset the value of 39006                   
+     * @param int $dataoffset the value of 39105                   
      */
     public static final function mapPhar($alias = NULL, $dataoffset = NULL)
     {
@@ -1049,7 +1048,7 @@ class PHP_Archive
      * API version of this class
      * @return string
      */
-    public final function APIVersion()
+    public static final function APIVersion()
     {
         return '1.0.0';
     }
@@ -1114,7 +1113,7 @@ class PHP_Archive
     }
 }}
 if (!class_exists('Phar')) {
-    PHP_Archive::mapPhar(null, 39006                   );
+    PHP_Archive::mapPhar(null, 39105                   );
 } else {
     try {
         Phar::mapPhar();
@@ -1131,7 +1130,7 @@ if (class_exists('PHP_Archive') && !in_array('phar', stream_get_wrappers())) {
 
 require_once 'phar://longphar.phar/testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttest.php';
 __HALT_COMPILER();§           
-   longphar.phar    l   testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttest.php+   ŸÇF+   pWûm      <?php
+   longphar.phar    l   testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttest.php+   ´ËÙF+   pWûm      <?php
 
 echo __FILE__;
 var_dump('hello');

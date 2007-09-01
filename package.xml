@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<package packagerversion="1.6.1" version="2.0" xmlns="http://pear.php.net/dtd/package-2.0" xmlns:tasks="http://pear.php.net/dtd/tasks-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0 http://pear.php.net/dtd/tasks-1.0.xsd http://pear.php.net/dtd/package-2.0 http://pear.php.net/dtd/package-2.0.xsd">
+<package packagerversion="1.6.2" version="2.0" xmlns="http://pear.php.net/dtd/package-2.0" xmlns:tasks="http://pear.php.net/dtd/tasks-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0 http://pear.php.net/dtd/tasks-1.0.xsd http://pear.php.net/dtd/package-2.0 http://pear.php.net/dtd/package-2.0.xsd">
  <name>PHP_Archive</name>
  <channel>pear.php.net</channel>
  <summary>Create and Use PHP Archive files</summary>
@@ -22,10 +22,10 @@
   <email>davey@php.net</email>
   <active>no</active>
  </lead>
- <date>2007-08-18</date>
- <time>12:07:51</time>
+ <date>2007-09-01</date>
+ <time>15:29:27</time>
  <version>
-  <release>0.11.2</release>
+  <release>0.11.3</release>
   <api>1.0.0</api>
  </version>
  <stability>
@@ -34,11 +34,8 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-major bugfix release
-* fix 64-bit/32-bit compatibility of phars (Brian Shire)
-* fix Bug #11858: seek to SEEK_END fails
-* fix Bug #11859: mapPhar fails for all phars internally loaded
-* fix Bug #11860: missing constant in PHP_Archive_Exception UNKNOWNSIG</notes>
+minor bugfix release
+* introspection cannot use exit within stream wrapper, PHP destabilizes, this is fixed</notes>
  <contents>
   <dir baseinstalldir="PHP" name="/">
    <dir name="Archive">
@@ -127,6 +124,21 @@ major bugfix release
  <changelog>
   <release>
    <version>
+    <release>0.11.3</release>
+    <api>1.0.0</api>
+   </version>
+   <stability>
+    <release>alpha</release>
+    <api>stable</api>
+   </stability>
+   <date>2007-09-01</date>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+minor bugfix release
+* introspection cannot use exit within stream wrapper, PHP destabilizes, this is fixed</notes>
+  </release>
+  <release>
+   <version>
     <release>0.11.2</release>
     <api>1.0.0</api>
    </version>
@@ -136,8 +148,7 @@ major bugfix release
    </stability>
    <date>2007-08-18</date>
    <license uri="http://www.php.net/license">PHP License</license>
-   <notes>
-major bugfix release
+   <notes>major bugfix release
 * fix 64-bit/32-bit compatibility of phars (Brian Shire)
 * fix Bug #11858: seek to SEEK_END fails
 * fix Bug #11859: mapPhar fails for all phars internally loaded

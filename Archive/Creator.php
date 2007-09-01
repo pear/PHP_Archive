@@ -360,8 +360,8 @@ require_once \'phar://@ALIAS@/' . addslashes($init_file) . '\';
                 'if (extension_loaded(\'phar\')) {' . $template . '} else {' .
                 $extra .
                 "if (!empty(\$_SERVER['REQUEST_URI'])) " .
-                "PHP_Archive::webFrontController('" .
-                addslashes($indexfile) . "');}\n", $contents);
+                "{PHP_Archive::webFrontController('" .
+                addslashes($indexfile) . "');exit;}}\n", $contents);
         }
         file_put_contents($this->temp_path . DIRECTORY_SEPARATOR . 'loader.php',
             $contents);
