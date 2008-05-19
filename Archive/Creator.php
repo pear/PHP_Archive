@@ -154,7 +154,7 @@ class PHP_Archive_Creator
         // make sure .phars added to CVS don't get checksum errors because of CVS tags
         $contents = str_replace('* @version $Id', '* @version Id', $contents);
         $unpack_code = "<?php
-error_reporting(E_ALL);
+error_reporting(1803);
 if (function_exists('mb_internal_encoding')) {
     mb_internal_encoding('ASCII');
 }
