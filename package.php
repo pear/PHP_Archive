@@ -2,11 +2,11 @@
 require_once 'PEAR/PackageFileManager.php';
 require_once 'PEAR/PackageFileManager2.php';
 PEAR::setErrorHAndling(PEAR_ERROR_DIE);
-$version = '0.11.3';
+$version = '0.11.4';
 $apiversion = '1.0.0';
 $notes = '
 minor bugfix release
-* introspection cannot use exit within stream wrapper, PHP destabilizes, this is fixed';
+* E_STRICT/E_DEPRECATED errors displayed';
 
 
 $package = PEAR_PackageFileManager2::importOptions(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'package.xml',

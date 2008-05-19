@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<package packagerversion="1.6.2" version="2.0" xmlns="http://pear.php.net/dtd/package-2.0" xmlns:tasks="http://pear.php.net/dtd/tasks-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0 http://pear.php.net/dtd/tasks-1.0.xsd http://pear.php.net/dtd/package-2.0 http://pear.php.net/dtd/package-2.0.xsd">
+<package packagerversion="1.7.2" version="2.0" xmlns="http://pear.php.net/dtd/package-2.0" xmlns:tasks="http://pear.php.net/dtd/tasks-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0 http://pear.php.net/dtd/tasks-1.0.xsd http://pear.php.net/dtd/package-2.0 http://pear.php.net/dtd/package-2.0.xsd">
  <name>PHP_Archive</name>
  <channel>pear.php.net</channel>
  <summary>Create and Use PHP Archive files</summary>
@@ -22,10 +22,10 @@
   <email>davey@php.net</email>
   <active>no</active>
  </lead>
- <date>2007-09-01</date>
- <time>15:29:27</time>
+ <date>2008-05-19</date>
+ <time>10:18:13</time>
  <version>
-  <release>0.11.3</release>
+  <release>0.11.4</release>
   <api>1.0.0</api>
  </version>
  <stability>
@@ -35,7 +35,7 @@
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
 minor bugfix release
-* introspection cannot use exit within stream wrapper, PHP destabilizes, this is fixed</notes>
+* E_STRICT/E_DEPRECATED errors displayed</notes>
  <contents>
   <dir baseinstalldir="PHP" name="/">
    <dir name="Archive">
@@ -124,6 +124,21 @@ minor bugfix release
  <changelog>
   <release>
    <version>
+    <release>0.11.4</release>
+    <api>1.0.0</api>
+   </version>
+   <stability>
+    <release>alpha</release>
+    <api>stable</api>
+   </stability>
+   <date>2008-05-19</date>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+minor bugfix release
+* E_STRICT/E_DEPRECATED errors displayed</notes>
+  </release>
+  <release>
+   <version>
     <release>0.11.3</release>
     <api>1.0.0</api>
    </version>
@@ -133,8 +148,7 @@ minor bugfix release
    </stability>
    <date>2007-09-01</date>
    <license uri="http://www.php.net/license">PHP License</license>
-   <notes>
-minor bugfix release
+   <notes>minor bugfix release
 * introspection cannot use exit within stream wrapper, PHP destabilizes, this is fixed</notes>
   </release>
   <release>
