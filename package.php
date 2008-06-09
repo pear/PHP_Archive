@@ -2,11 +2,11 @@
 require_once 'PEAR/PackageFileManager.php';
 require_once 'PEAR/PackageFileManager2.php';
 PEAR::setErrorHAndling(PEAR_ERROR_DIE);
-$version = '0.11.4';
-$apiversion = '1.0.0';
+$version = '0.12.0';
+$apiversion = '1.1.0';
 $notes = '
-minor bugfix release
-* E_STRICT/E_DEPRECATED errors displayed';
+sync with ext/phar
+ * add empty directory support';
 
 
 $package = PEAR_PackageFileManager2::importOptions(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'package.xml',

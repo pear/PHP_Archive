@@ -23,7 +23,7 @@
  * @package PHP_Archive
  * @category PHP
  */
- 
+
 class PHP_Archive
 {
     const GZ = 0x00001000;
@@ -31,6 +31,9 @@ class PHP_Archive
     const SIG = 0x00010000;
     const SHA1 = 0x0002;
     const MD5 = 0x0001;
+    const SHA256 = 0x0003;
+    const SHA512 = 0x0004;
+    const OPENSSL = 0x0010;
     /**
      * Whether this archive is compressed with zlib
      *
@@ -51,6 +54,11 @@ class PHP_Archive
      * @var string
      */
     protected $internalFileLength = null;
+    /**
+     * true if the current file is an empty directory
+     * @var string
+     */
+    protected $isDir = false;
     /**
      * Current file statistics (size, creation date, etc.)
      * @var string
@@ -74,7 +82,7 @@ class PHP_Archive
      * require_once 'phar://PEAR.phar/PEAR/Installer.php';
      * </code>
      * then the alias is "PEAR.phar"
-     * 
+     *
      * Information stored is a boolean indicating whether this .phar is compressed
      * with zlib, another for bzip2, phar-specific meta-data, and
      * the precise offset of internal files
@@ -90,9 +98,9 @@ class PHP_Archive
     private static $_pharFiles = array();
     /**
      * File listing for the .phar
-     * 
+     *
      * The manifest is indexed per phar.
-     * 
+     *
      * Files within the .phar are indexed by their relative path within the
      * .phar.  Each file has this information in its internal array
      *
@@ -205,7 +213,7 @@ class PHP_Archive
             header("HTTP/1.0 404 Not Found");
             return false;
         }
-        
+
     }
 
     public static function introspect($archive, $dir)
@@ -435,7 +443,7 @@ class PHP_Archive
             $manifest .= $last;
         }
         if (strlen($manifest) < $manifest_length['len']) {
-            throw new Exception('ERROR: manifest length read was "' . 
+            throw new Exception('ERROR: manifest length read was "' .
                 strlen($manifest) .'" should be "' .
                 $manifest_length['len'] . '"');
         }
@@ -579,7 +587,15 @@ class PHP_Archive
     {
         $std = self::processFile($path);
         if (isset(self::$_manifest[$this->_archiveName][$path])) {
-            $this->_setCurrentFile($path);
+            if ($path[strlen($path)-1] == '/') {
+                // directory
+                if (!$allowdirs) {
+                    return 'Error: "' . $path . '" is a directory in phar "' . $this->_basename . '"';
+                }
+                $this->_setCurrentFile($path, true);
+            } else {
+                $this->_setCurrentFile($path);
+            }
             return true;
         }
         if (!$allowdirs) {
@@ -596,17 +612,30 @@ class PHP_Archive
         return 'Error: "' . $path . '" not found in phar "' . $this->_basename . '"';
     }
 
-    private function _setCurrentFile($path)
+    private function _setCurrentFile($path, $dir = false)
     {
-        $this->currentStat = array(
-            2 => 0100444, // file mode, readable by all, writeable by none
-            4 => 0, // uid
-            5 => 0, // gid
-            7 => self::$_manifest[$this->_archiveName][$path][0], // size
-            9 => self::$_manifest[$this->_archiveName][$path][1], // creation time
-            );
+        if ($dir) {
+            $this->currentStat = array(
+                2 => 040777, // directory mode, readable by all, writeable by none
+                4 => 0, // uid
+                5 => 0, // gid
+                7 => 0, // size
+                9 => self::$_manifest[$this->_archiveName][$path][1], // creation time
+                );
+            $this->internalFileLength = 0;
+            $this->isDir = true;
+        } else {
+            $this->currentStat = array(
+                2 => 0100444, // file mode, readable by all, writeable by none
+                4 => 0, // uid
+                5 => 0, // gid
+                7 => self::$_manifest[$this->_archiveName][$path][0], // size
+                9 => self::$_manifest[$this->_archiveName][$path][1], // creation time
+                );
+            $this->internalFileLength = self::$_manifest[$this->_archiveName][$path][2];
+            $this->isDir = false;
+        }
         $this->currentFilename = $path;
-        $this->internalFileLength = self::$_manifest[$this->_archiveName][$path][2];
         // seek to offset of file header within the .phar
         if (is_resource(@$this->fp)) {
             fseek($this->fp, self::$_fileStart[$this->_archiveName] + self::$_manifest[$this->_archiveName][$path][7]);
@@ -683,7 +712,7 @@ class PHP_Archive
             return false;
         }
         $file = substr($file, 7);
-    
+
         $ret = array('scheme' => 'phar');
         $pos_p = strpos($file, '.phar.php');
         $pos_z = strpos($file, '.phar.gz');
@@ -711,7 +740,7 @@ class PHP_Archive
         }
         return $ret;
     }
-    
+
     /**
      * Locate the .phar archive in the include_path and detect the file to open within
      * the archive.
@@ -807,7 +836,7 @@ class PHP_Archive
             return false;
         }
     }
-    
+
     /**
      * Read the data - PHP streams API
      *
@@ -820,7 +849,7 @@ class PHP_Archive
         $this->position += strlen($ret);
         return $ret;
     }
-    
+
     /**
      * Whether we've hit the end of the file - PHP streams API
      * @access private
@@ -829,7 +858,7 @@ class PHP_Archive
     {
         return $this->position >= $this->currentStat[7];
     }
-    
+
     /**
      * For seeking the stream - PHP streams API
      * @param int
@@ -862,7 +891,7 @@ class PHP_Archive
         }
         return true;
     }
-    
+
     /**
      * The current position in the stream - PHP streams API
      * @access private
@@ -988,6 +1017,9 @@ class PHP_Archive
                 }
             } elseif (strpos($file, $path) === 0) {
                 $fname = substr($file, strlen($path) + 1);
+                if ($fname == '/' || $fname[strlen($fname)-1] == '/') {
+                    continue; // empty directory
+                }
                 if (strpos($fname, '/')) {
                     // this is a directory
                     $a = explode('/', $fname);
@@ -1098,12 +1130,15 @@ class PHP_Archive
     /**
      * @return list of supported signature algorithmns.
      */
-    public static function getsupportedsignatures()
+    public static function getSupportedSignatures()
     {
         $ret = array('MD5', 'SHA-1');
         if (extension_loaded('hash')) {
             $ret[] = 'SHA-256';
             $ret[] = 'SHA-512';
+        }
+        if (extension_loaded('openssl')) {
+            $ret[] = 'OpenSSL';
         }
         return $ret;
     }
