@@ -1,0 +1,38 @@
+{
+    "authors": [
+        {
+            "email": "cellog@php.net",
+            "name": "Greg Beaver",
+            "role": "Lead"
+        },
+        {
+            "email": "helly@php.net",
+            "name": "Marcus Boerger",
+            "role": "Lead"
+        },
+        {
+            "email": "davey@php.net",
+            "name": "Davey Shafik",
+            "role": "Lead"
+        }
+    ],
+    "autoload": {
+        "classmap": [
+            "./"
+        ]
+    },
+    "description": "More info available on: http://pear.php.net/package/PHP_Archive",
+    "license": "PHP License",
+    "name": "pear/php_archive",
+    "support": {
+        "issues": "http://pear.php.net/bugs/search.php?cmd=display&package_name[]=PHP_Archive",
+        "source": "https://github.com/pear/PHP_Archive"
+    },
+    "type": "library",
+    "require": {
+        "pear/pear_exception": "*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "*"
+    }
+}
