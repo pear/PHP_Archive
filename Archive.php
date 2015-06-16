@@ -567,7 +567,7 @@ class PHP_Archive
             return '';
         }
         $std = str_replace("\\", "/", $path);
-        while ($std != ($std = preg_replace("/[^\/:?]+/\.\.//", "", $std))) ;
+        while ($std != ($std = preg_replace("/[^\/:?]+\/\.\.\//", "", $std))) ;
         $std = str_replace("/./", "", $std);
         if (strlen($std) > 1 && $std[0] == '/') {
             $std = substr($std, 1);
