@@ -21,19 +21,17 @@
             "./"
         ]
     },
-    "description": "More info available on: http://pear.php.net/package/PHP_Archive",
+    "description": "Create a single .phar file containing an entire application",
+    "homepage": "http://pear.php.net/package/PHP_Archive",
     "license": "PHP License",
     "name": "pear/php_archive",
     "support": {
         "issues": "http://pear.php.net/bugs/search.php?cmd=display&package_name[]=PHP_Archive",
-        "source": "https://github.com/pear/PHP_Archive"
+        "source": "https://github.com/pear/PHP_Archive",
+        "docs": "http://pear.php.net/manual/en/package.php.php-archive.php"
     },
     "type": "library",
     "require": {
-        "pear/pear_exception": "*",
-        "pear/pear": "*"
-    },
-    "require-dev": {
-        "phpunit/phpunit": "*"
+        "pear/pear_exception": "*"
     }
 }
