@@ -1,12 +1,14 @@
 --TEST--
 Test running a .phar with missing file [phar extension]
+--INI--
+phar.require_hash=Off
 --SKIPIF--
 <?php
 if (!extension_loaded('phar')) { echo 'skip'; }
 ?>
 --FILE--
 <?php
-require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . 'phpt_test.php.inc';
+require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . 'setup.php';
 function myhand($e, $s)
 {
     if ($e == E_STRICT) return;
@@ -19,5 +21,5 @@ require dirname(__FILE__) . DIRECTORY_SEPARATOR . 'filenotfound' . DIRECTORY_SEP
 echo 'tests done';
 ?>
 --EXPECT--
-Error: "test2.php" is not a file in phar "filenotfound.phar"
+fopen(phar://filenotfound.phar/test2.php): failed to open stream: phar error: "test2.php" is not a file in phar "filenotfound.phar"
 tests done

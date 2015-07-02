@@ -1,5 +1,7 @@
 --TEST--
 Test seeking a .phar stream
+--INI--
+phar.require_hash=Off
 --SKIPIF--
 <?php
 if (version_compare(phpversion(), '5.1.0b1', '<')) {
@@ -8,7 +10,7 @@ if (version_compare(phpversion(), '5.1.0b1', '<')) {
 ?>
 --FILE--
 <?php
-require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . 'phpt_test.php.inc';
+require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . 'setup.php';
 require dirname(__FILE__) . DIRECTORY_SEPARATOR . 'longfilename' . DIRECTORY_SEPARATOR .
     'longphar.phar';
 $phpunit = new PEAR_PHPTest(true);
@@ -20,8 +22,8 @@ var_dump(feof($fp), ftell($fp));
 fclose($fp);
 echo 'tests done';
 ?>
---EXPECT--
-phar://longphar.phar/testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttest.phpstring(5) "hello"
+--EXPECTF--
+phar:/%slongphar.phar/testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttest.phpstring(5) "hello"
 bool(false)
 int(0)
 bool(true)

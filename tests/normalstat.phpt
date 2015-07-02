@@ -1,5 +1,7 @@
 --TEST--
 Test statting a .phar
+--INI--
+phar.require_hash=Off
 --SKIPIF--
 <?php
 if (version_compare(phpversion(), '5.0.0', '<')) {
@@ -9,7 +11,7 @@ if (extension_loaded('phar')) { echo 'skip phar extension conflicts with this te
 ?>
 --FILE--
 <?php
-require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . 'phpt_test.php.inc';
+require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . 'setup.php';
 require dirname(__FILE__) . DIRECTORY_SEPARATOR . 'longfilename' . DIRECTORY_SEPARATOR .
     'longphar.phar';
 $phpunit = new PEAR_PHPTest(true);

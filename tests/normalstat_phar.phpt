@@ -1,23 +1,25 @@
 --TEST--
 Test statting a .phar [phar extension]
+--INI--
+phar.require_hash=Off
 --SKIPIF--
 <?php
 if (version_compare(phpversion(), '5.0.0', '<')) {
     echo 'skip php5-only test';
 }
-if (!extension_loaded('phar')) { echo 'skip phar extension conflicts with this test'; }
+if (!extension_loaded('phar')) { echo 'skip phar extension required for this test'; }
 ?>
 --FILE--
 <?php
-require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . 'phpt_test.php.inc';
+require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . 'setup.php';
 require dirname(__FILE__) . DIRECTORY_SEPARATOR . 'longfilename' . DIRECTORY_SEPARATOR .
     'longphar.phar';
 $phpunit = new PEAR_PHPTest(true);
 $x = stat('phar://longphar.phar/testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttest.php');
 $phpunit->assertEquals(array (
   0 => 12,
-  1 => -895164305,
-  2 => 33060,
+  1 => $x[1],
+  2 => $x[2],
   3 => 1,
   4 => 0,
   5 => 0,
@@ -26,11 +28,11 @@ $phpunit->assertEquals(array (
   8 => $x[8],
   9 => $x[8],
   10 => $x[8],
-  11 => 0,
-  12 => 0,
+  11 => $x[11],
+  12 => $x[12],
   'dev' => 12,
-  'ino' => -895164305,
-  'mode' => 33060,
+  'ino' => $x[1],
+  'mode' => $x[2],
   'nlink' => 1,
   'uid' => 0,
   'gid' => 0,
@@ -39,11 +41,11 @@ $phpunit->assertEquals(array (
   'atime' => $x[8],
   'mtime' => $x[8],
   'ctime' => $x[8],
-  'blksize' => 0,
-  'blocks' => 0,
+  'blksize' => $x[11],
+  'blocks' => $x[12],
 ), $x, 'stat');
 echo 'tests done';
 ?>
---EXPECT--
-phar://longphar.phar/testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttest.phpstring(5) "hello"
+--EXPECTF--
+phar://%slongphar.phar/testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttest.phpstring(5) "hello"
 tests done
