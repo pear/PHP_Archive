@@ -31,7 +31,7 @@ class PHP_Archive_Manager
     private $_archiveName;
     private $_apiVersion;
     private $_flags;
-    private $_knownAPIVersions = array('1.0.0');
+    private $_knownAPIVersions = array('1.0.0', '1.1.0');
     private $_manifest;
     private $_fileStart;
     private $_manifestSize;
