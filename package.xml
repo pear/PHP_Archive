@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<package packagerversion="1.7.2" version="2.0" xmlns="http://pear.php.net/dtd/package-2.0" xmlns:tasks="http://pear.php.net/dtd/tasks-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0 http://pear.php.net/dtd/tasks-1.0.xsd http://pear.php.net/dtd/package-2.0 http://pear.php.net/dtd/package-2.0.xsd">
+<package packagerversion="1.9.5" version="2.0" xmlns="http://pear.php.net/dtd/package-2.0" xmlns:tasks="http://pear.php.net/dtd/tasks-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0 http://pear.php.net/dtd/tasks-1.0.xsd http://pear.php.net/dtd/package-2.0 http://pear.php.net/dtd/package-2.0.xsd">
  <name>PHP_Archive</name>
  <channel>pear.php.net</channel>
  <summary>Create and Use PHP Archive files</summary>
@@ -22,11 +22,11 @@
   <email>davey@php.net</email>
   <active>no</active>
  </lead>
- <date>2008-05-19</date>
- <time>10:18:13</time>
+ <date>2015-07-06</date>
+ <time>07:37:52</time>
  <version>
-  <release>0.11.4</release>
-  <api>1.0.0</api>
+  <release>0.12.0</release>
+  <api>1.1.0</api>
  </version>
  <stability>
   <release>alpha</release>
@@ -34,8 +34,14 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-minor bugfix release
-* E_STRICT/E_DEPRECATED errors displayed</notes>
+sync with ext/phar
+* add empty directory support
+
+Fix bugs
+* Get rid of ereg_replace
+* Fix phar compression detection
+* Make tests run on PHP 5.2 - 7
+ </notes>
  <contents>
   <dir baseinstalldir="PHP" name="/">
    <dir name="Archive">
@@ -89,6 +95,7 @@ minor bugfix release
     <file name="savetest.php" role="test" />
     <file name="seek.phpt" role="test" />
     <file name="seek_phar.phpt" role="test" />
+    <file name="setup.php" role="test" />
     <file name="streamstat.phpt" role="test" />
     <file name="streamstat_phar.phpt" role="test" />
     <file name="test.php" role="test" />
@@ -108,20 +115,41 @@ minor bugfix release
  <dependencies>
   <required>
    <php>
-    <min>5.1.0</min>
+    <min>5.2.0</min>
    </php>
    <pearinstaller>
-    <min>1.4.3</min>
+    <min>1.9.0</min>
    </pearinstaller>
    <package>
     <name>PEAR</name>
     <channel>pear.php.net</channel>
-    <min>1.4.3</min>
+    <min>1.9.5</min>
    </package>
   </required>
  </dependencies>
  <phprelease />
  <changelog>
+  <release>
+   <version>
+    <release>0.12.0</release>
+    <api>1.1.0</api>
+   </version>
+   <stability>
+    <release>alpha</release>
+    <api>stable</api>
+   </stability>
+   <date>2015-07-06</date>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+sync with ext/phar
+* add empty directory support
+
+Fix bugs
+* Get rid of ereg_replace
+* Fix phar compression detection
+* Make tests run on PHP 5.2 - 7
+   </notes>
+  </release>
   <release>
    <version>
     <release>0.11.4</release>
@@ -135,7 +163,8 @@ minor bugfix release
    <license uri="http://www.php.net/license">PHP License</license>
    <notes>
 minor bugfix release
-* E_STRICT/E_DEPRECATED errors displayed</notes>
+* E_STRICT/E_DEPRECATED errors displayed
+   </notes>
   </release>
   <release>
    <version>
@@ -148,8 +177,10 @@ minor bugfix release
    </stability>
    <date>2007-09-01</date>
    <license uri="http://www.php.net/license">PHP License</license>
-   <notes>minor bugfix release
-* introspection cannot use exit within stream wrapper, PHP destabilizes, this is fixed</notes>
+   <notes>
+minor bugfix release
+* introspection cannot use exit within stream wrapper, PHP destabilizes, this is fixed
+   </notes>
   </release>
   <release>
    <version>
@@ -162,11 +193,13 @@ minor bugfix release
    </stability>
    <date>2007-08-18</date>
    <license uri="http://www.php.net/license">PHP License</license>
-   <notes>major bugfix release
+   <notes>
+major bugfix release
 * fix 64-bit/32-bit compatibility of phars (Brian Shire)
 * fix Bug #11858: seek to SEEK_END fails
 * fix Bug #11859: mapPhar fails for all phars internally loaded
-* fix Bug #11860: missing constant in PHP_Archive_Exception UNKNOWNSIG</notes>
+* fix Bug #11860: missing constant in PHP_Archive_Exception UNKNOWNSIG
+   </notes>
   </release>
   <release>
    <version>
@@ -179,7 +212,9 @@ minor bugfix release
    </stability>
    <date>2007-05-29</date>
    <license uri="http://www.php.net/license">PHP License</license>
-   <notes>Remove potential notice in directory rewind()</notes>
+   <notes>
+Remove potential notice in directory rewind()
+   </notes>
   </release>
   <release>
    <version>
@@ -192,10 +227,12 @@ minor bugfix release
    </stability>
    <date>2007-05-29</date>
    <license uri="http://www.php.net/license">PHP License</license>
-   <notes>Add support for introspection (web) and front controller (web)
+   <notes>
+Add support for introspection (web) and front controller (web)
 Synchronize PHP_Archive class mapPhar() and loadPhar() with API of phar extension
 fix url_stat() for non-existing directories/files
-fix</notes>
+fix
+   </notes>
   </release>
   <release>
    <version>
@@ -208,7 +245,8 @@ fix</notes>
    </stability>
    <date>2007-02-05</date>
    <license uri="http://www.php.net/license">PHP License</license>
-   <notes>Update to match phar extension
+   <notes>
+Update to match phar extension
 
 Final API for 1.0.0 is set
 
@@ -219,7 +257,8 @@ Add support for:
  * bzip2 compression of files
  * SHA1/MD5 signature creation (Phar extension can use this,
    PHP_Archive does not on open for performance reasons)
- * file permissions (always set to 0555)</notes>
+ * file permissions (always set to 0555)
+   </notes>
   </release>
   <release>
    <version>
@@ -232,11 +271,13 @@ Add support for:
    </stability>
    <date>2007-01-06</date>
    <license uri="http://www.php.net/license">PHP License</license>
-   <notes>another major 32-bit/64-bit issue in PHP 5.1 where crc32() returns different values
+   <notes>
+another major 32-bit/64-bit issue in PHP 5.1 where crc32() returns different values
 was causing some phars to fail.
 
 This is *not* fixed in PHP 5.2, and won&apos;t be.  This only affects CRCs.  The workaround
-found is to sprintf(&quot;%u&quot;, crc32($data))</notes>
+found is to sprintf(&quot;%u&quot;, crc32($data))
+   </notes>
   </release>
   <release>
    <version>
@@ -249,7 +290,8 @@ found is to sprintf(&quot;%u&quot;, crc32($data))</notes>
    </stability>
    <date>2007-01-05</date>
    <license uri="http://www.php.net/license">PHP License</license>
-   <notes>fix API version so that Phar extension can also open PHP_Archive-generated archives
+   <notes>
+fix API version so that Phar extension can also open PHP_Archive-generated archives
 
 major 32-bit/64-bit issue in PHP 5.1 where unpack() returns different values
 was causing some phars to fail.  For instance:
@@ -262,7 +304,8 @@ int(3068571189) on 32 bit and
 int(-1226396107) on 64 bit
 
 in PHP 5.1.  This is fixed in PHP 5.2.  This only affects CRCs.  The workaround
-found is to sprintf(&quot;%u&quot;, $crc)</notes>
+found is to sprintf(&quot;%u&quot;, $crc)
+   </notes>
   </release>
   <release>
    <version>
@@ -275,10 +318,12 @@ found is to sprintf(&quot;%u&quot;, $crc)</notes>
    </stability>
    <date>2006-12-15</date>
    <license uri="http://www.php.net/license">PHP License</license>
-   <notes>This release is fully compatible with the phar extension
+   <notes>
+This release is fully compatible with the phar extension
 
 Minor feature addition:
-* implement Request #7362: Add archive collapsing to greatly reduce phar base size</notes>
+* implement Request #7362: Add archive collapsing to greatly reduce phar base size
+   </notes>
   </release>
   <release>
    <version>
@@ -291,7 +336,8 @@ Minor feature addition:
    </stability>
    <date>2006-07-18</date>
    <license uri="http://www.php.net/license">PHP License</license>
-   <notes>This release is fully compatible with the phar extension
+   <notes>
+This release is fully compatible with the phar extension
 
 Major BC breaks:
 * the entire structure of an internal phar&apos;s manifest has changed
@@ -305,7 +351,8 @@ Feature additions:
 * new PHP_Archive_Manager is available for debugging phars
 
 Bug fixes:
-* fix bug #7110: mapPhar security error</notes>
+* fix bug #7110: mapPhar security error
+   </notes>
   </release>
   <release>
    <version>
@@ -318,9 +365,11 @@ Bug fixes:
    </stability>
    <date>2005-11-30</date>
    <license uri="http://www.php.net/license">PHP License</license>
-   <notes>major refactoring - .tar file format is no longer used
+   <notes>
+major refactoring - .tar file format is no longer used
 DRAMATIC improvement in efficiency of disk use, memory usage,
-and processing speed.</notes>
+and processing speed.
+   </notes>
   </release>
   <release>
    <version>
@@ -333,9 +382,11 @@ and processing speed.</notes>
    </stability>
    <date>2005-09-05</date>
    <license uri="http://www.php.net/license">PHP License</license>
-   <notes>Bugfix release
+   <notes>
+Bugfix release
  * fix faulty dependency on unreleased Archive_Tar
- * fix version_compare()&apos;s bungling of versioning ending with -dev</notes>
+ * fix version_compare()&apos;s bungling of versioning ending with -dev
+   </notes>
   </release>
   <release>
    <version>
@@ -348,14 +399,16 @@ and processing speed.</notes>
    </stability>
    <date>2005-08-14</date>
    <license uri="http://www.php.net/license">PHP License</license>
-   <notes>Bugfix release
+   <notes>
+Bugfix release
  * change error_reporting to E_ALL.  Was stupidly using
    E_ERROR | E_WARNING | E_PARSE | E_NOTICE
  * change __HALT_PHP_PARSER__ to __HALT_COMPILER()
  * rework fread() usage to avoid all potential bugs with chunks
    larger than 8192
  * drop support for PHP 4.3.x and 5.0.x.  Streams are impossible to
-   fully support due to bugs in all PHP versions &lt; 5.1.0.</notes>
+   fully support due to bugs in all PHP versions &lt; 5.1.0.
+   </notes>
   </release>
   <release>
    <version>
@@ -368,7 +421,8 @@ and processing speed.</notes>
    </stability>
    <date>2005-05-03</date>
    <license uri="http://www.php.net/license">PHP License</license>
-   <notes>* Full support for multiple .phars! phar://pharname.phar/file
+   <notes>
+* Full support for multiple .phars! phar://pharname.phar/file
    and phar://phar2.phar/anotherfile will work now
  * Fix gz compression
  * remove Archive_Tar dep for non-creation
@@ -376,7 +430,8 @@ and processing speed.</notes>
  * bundle PHP_Archive in all created .phars - standalone! Only
    compressed .phars have a dep on zlib
  * Add support for filenames &gt; 100 characters in length and unit test
- * Add full support for stat()/is_file()/is_dir()/is_readable() etc., opendir()/readdir()</notes>
+ * Add full support for stat()/is_file()/is_dir()/is_readable() etc., opendir()/readdir()
+   </notes>
   </release>
   <release>
    <version>
@@ -389,7 +444,9 @@ and processing speed.</notes>
    </stability>
    <date>2004-11-29</date>
    <license uri="http://www.php.net/license">PHP License</license>
-   <notes>Made PHP_Archive_Creator smarter</notes>
+   <notes>
+Made PHP_Archive_Creator smarter
+   </notes>
   </release>
   <release>
    <version>
@@ -402,7 +459,9 @@ and processing speed.</notes>
    </stability>
    <date>2004-07-06</date>
    <license uri="http://www.php.net/license">PHP License</license>
-   <notes>Added Stream Seek</notes>
+   <notes>
+Added Stream Seek
+   </notes>
   </release>
   <release>
    <version>
@@ -415,7 +474,9 @@ and processing speed.</notes>
    </stability>
    <date>2004-06-14</date>
    <license uri="http://www.php.net/license">PHP License</license>
-   <notes>First PEPr Release</notes>
+   <notes>
+First PEPr Release
+   </notes>
   </release>
   <release>
    <version>
@@ -428,7 +489,9 @@ and processing speed.</notes>
    </stability>
    <date>2004-06-13</date>
    <license uri="http://www.php.net/license">PHP License</license>
-   <notes>First Package</notes>
+   <notes>
+First Package
+   </notes>
   </release>
  </changelog>
 </package>
