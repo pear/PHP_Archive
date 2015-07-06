@@ -1082,7 +1082,7 @@ class PHP_Archive
      */
     public static final function APIVersion()
     {
-        return '1.0.0';
+        return '1.1.0';
     }
 
     /**
@@ -1164,7 +1164,7 @@ if (class_exists('PHP_Archive') && !in_array('phar', stream_get_wrappers())) {
 
 
 require_once 'phar://longphar.phar/testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttest.php';
-__HALT_COMPILER();§              longphar.phar    l   testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttest.php+   E˜•U+   pWûm      <?php
+__HALT_COMPILER();§              longphar.phar    l   testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttest.php+   ÆšU+   pWûm      <?php
 
 echo __FILE__;
 var_dump('hello');

@@ -1082,7 +1082,7 @@ class PHP_Archive
      */
     public static final function APIVersion()
     {
-        return '1.0.0';
+        return '1.1.0';
     }
 
     /**
@@ -1164,6 +1164,6 @@ if (class_exists('PHP_Archive') && !in_array('phar', stream_get_wrappers())) {
 
 
 require_once 'phar://filenotfound.phar/index.php';
-__HALT_COMPILER();H              filenotfound.phar    	   index.php:   E˜•U:   ·­sm      <?php
+__HALT_COMPILER();H              filenotfound.phar    	   index.php:   ÆšU:   ·­sm      <?php
 fopen('phar://filenotfound.phar/test2.php', 'r');
 ?>

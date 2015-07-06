@@ -1082,7 +1082,7 @@ class PHP_Archive
      */
     public static final function APIVersion()
     {
-        return '1.0.0';
+        return '1.1.0';
     }
 
     /**
@@ -1164,4 +1164,4 @@ if (class_exists('PHP_Archive') && !in_array('phar', stream_get_wrappers())) {
 
 
 require_once 'phar://require_once.phar/indexhooha.php';
-__HALT_COMPILER();M            require_once.phar       indexhooha.phpP   E˜•UC   óá´	m      ³±/È(àâJMÎÈWˆwóôq·æ*J-,Í,JÏÏKNUP/ÈH,²Ò×GÔ‰éçå—&g¤eæ€øêÖ\öv 
+__HALT_COMPILER();M            require_once.phar       indexhooha.phpP   ÆšUC   óá´	m      ³±/È(àâJMÎÈWˆwóôq·æ*J-,Í,JÏÏKNUP/ÈH,²Ò×GÔ‰éçå—&g¤eæ€øêÖ\öv 
