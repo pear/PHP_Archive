@@ -954,10 +954,10 @@ class PHP_Archive
            'dev' => 0, 'ino' => 0,
            'mode' => $mode,
            'nlink' => 0, 'uid' => 0, 'gid' => 0, 'rdev' => 0, 'blksize' => 0, 'blocks' => 0,
-           'size' => $this->currentStat[7],
-           'atime' => $this->currentStat[9],
-           'mtime' => $this->currentStat[9],
-           'ctime' => $this->currentStat[9],
+           'size' => $this->currentStat ? $this->currentStat[7] : 0,
+           'atime' => $this->currentStat ? $this->currentStat[9] : 0,
+           'mtime' => $this->currentStat ? $this->currentStat[9] : 0,
+           'ctime' => $this->currentStat ? $this->currentStat[9] : 0,
            );
     }
 
@@ -971,6 +971,19 @@ class PHP_Archive
     {
         $path = $this->initializeStream($url);
         return $this->_stream_stat($path);
+    }
+
+    /**
+     * Set a stream option - PHP stream API
+     * @param int
+     * @param int
+     * @param int
+     * @access private
+     */
+    public function stream_set_option($option, $arg1, $arg2)
+    {
+        // Simply ignore set options.
+        return false;
     }
 
     /**
