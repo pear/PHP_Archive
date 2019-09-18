@@ -390,7 +390,7 @@ class PHP_Archive
      * Any attempt to call from outside the .phar or to re-alias the .phar will fail
      * as a security measure.
      * @param string $alias
-     * @param int $dataoffset the value of 40241                   
+     * @param int $dataoffset the value of 40612                   
      */
     public static final function mapPhar($alias = NULL, $dataoffset = NULL)
     {
@@ -958,10 +958,10 @@ class PHP_Archive
            'dev' => 0, 'ino' => 0,
            'mode' => $mode,
            'nlink' => 0, 'uid' => 0, 'gid' => 0, 'rdev' => 0, 'blksize' => 0, 'blocks' => 0,
-           'size' => $this->currentStat[7],
-           'atime' => $this->currentStat[9],
-           'mtime' => $this->currentStat[9],
-           'ctime' => $this->currentStat[9],
+           'size' => $this->currentStat ? $this->currentStat[7] : 0,
+           'atime' => $this->currentStat ? $this->currentStat[9] : 0,
+           'mtime' => $this->currentStat ? $this->currentStat[9] : 0,
+           'ctime' => $this->currentStat ? $this->currentStat[9] : 0,
            );
     }
 
@@ -975,6 +975,19 @@ class PHP_Archive
     {
         $path = $this->initializeStream($url);
         return $this->_stream_stat($path);
+    }
+
+    /**
+     * Set a stream option - PHP stream API
+     * @param int
+     * @param int
+     * @param int
+     * @access private
+     */
+    public function stream_set_option($option, $arg1, $arg2)
+    {
+        // Simply ignore set options.
+        return false;
     }
 
     /**
@@ -1148,7 +1161,7 @@ class PHP_Archive
     }
 }}
 if (!class_exists('Phar')) {
-    PHP_Archive::mapPhar(null, 40241                   );
+    PHP_Archive::mapPhar(null, 40612                   );
 } else {
     try {
         Phar::mapPhar();
@@ -1164,4 +1177,4 @@ if (class_exists('PHP_Archive') && !in_array('phar', stream_get_wrappers())) {
 
 
 require_once 'phar://require_once.phar/indexhooha.php';
-__HALT_COMPILER();M            require_once.phar       indexhooha.phpP   ÆšUC   óá´	m      ³±/È(àâJMÎÈWˆwóôq·æ*J-,Í,JÏÏKNUP/ÈH,²Ò×GÔ‰éçå—&g¤eæ€øêÖ\öv 
+__HALT_COMPILER();M            require_once.phar       indexhooha.phpP   üe]C   óá´	m      ³±/È(àâJMÎÈWˆwóôq·æ*J-,Í,JÏÏKNUP/ÈH,²Ò×GÔ‰éçå—&g¤eæ€øêÖ\öv 

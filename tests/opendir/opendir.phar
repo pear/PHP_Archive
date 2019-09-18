@@ -390,7 +390,7 @@ class PHP_Archive
      * Any attempt to call from outside the .phar or to re-alias the .phar will fail
      * as a security measure.
      * @param string $alias
-     * @param int $dataoffset the value of 40196                   
+     * @param int $dataoffset the value of 40567                   
      */
     public static final function mapPhar($alias = NULL, $dataoffset = NULL)
     {
@@ -958,10 +958,10 @@ class PHP_Archive
            'dev' => 0, 'ino' => 0,
            'mode' => $mode,
            'nlink' => 0, 'uid' => 0, 'gid' => 0, 'rdev' => 0, 'blksize' => 0, 'blocks' => 0,
-           'size' => $this->currentStat[7],
-           'atime' => $this->currentStat[9],
-           'mtime' => $this->currentStat[9],
-           'ctime' => $this->currentStat[9],
+           'size' => $this->currentStat ? $this->currentStat[7] : 0,
+           'atime' => $this->currentStat ? $this->currentStat[9] : 0,
+           'mtime' => $this->currentStat ? $this->currentStat[9] : 0,
+           'ctime' => $this->currentStat ? $this->currentStat[9] : 0,
            );
     }
 
@@ -975,6 +975,19 @@ class PHP_Archive
     {
         $path = $this->initializeStream($url);
         return $this->_stream_stat($path);
+    }
+
+    /**
+     * Set a stream option - PHP stream API
+     * @param int
+     * @param int
+     * @param int
+     * @access private
+     */
+    public function stream_set_option($option, $arg1, $arg2)
+    {
+        // Simply ignore set options.
+        return false;
     }
 
     /**
@@ -1148,7 +1161,7 @@ class PHP_Archive
     }
 }}
 if (!class_exists('Phar')) {
-    PHP_Archive::mapPhar(null, 40196                   );
+    PHP_Archive::mapPhar(null, 40567                   );
 } else {
     try {
         Phar::mapPhar();
@@ -1164,7 +1177,7 @@ if (class_exists('PHP_Archive') && !in_array('phar', stream_get_wrappers())) {
 
 
 require_once 'phar://opendir.phar/indexhooha.php';
-__HALT_COMPILER();p           opendir.phar       eof.phpt	  ÆšUš  km         filenotfound.phptM  ÆšUZ  b¼m      )   filenotfound/makefilenotfoundphar.php.incï  ÆšUÜ   ºm         filenotfound_phar.phpt¦  ÆšU  ×g#m         gopearphar.php.inc)  ÆšU¯  Œ[ÁQm         indexhooha.php+   ÆšU-   pWûm         longfilename.phptæ  ÆšUì   àŞ¢m      !   longfilename/makelongphar.php.inc™  ÆšUÓ   ,ª²Õm         makepearphar.php.inc  ÆšUw  ›¦¶&m         normalstat.phptÍ  ÆšUş  ñáÊ»m         normalstat_phar.phpt   ÆšU  KÛam         opendir.phptï	  ÆšUt  iRm         opendir/makeopendirphar.php.inc  ÆšUÍ  åÂå m         phpt_test.php.incu$  ÆšU»  Šàe{m         planet_php/default_phar.phpĞ  ÆšU1  *óÓüm         require_once.phpt«  ÆšUk  VË&¸m      )   require_once/makerequire_oncephar.php.incû  ÆšUá   ßİvm         require_once_phar.phptİ  ÆšUq  œ°#m      	   seek.phpt¤  ÆšU8  ï	Šfm         seek_phar.phpt½  ÆšU  î\|m         streamstat.phptÿ  ÆšU  ©eçm         streamstat_phar.phpt+  ÆšU5  hìRùm         test_tar.tar   ÆšUİ   µBê'm      ÍSMÓ0½ûWŒV ÛI[±½ì«
+__HALT_COMPILER();p           opendir.phar       eof.phpt	  üe]š  km         filenotfound.phptM  üe]Z  b¼m      )   filenotfound/makefilenotfoundphar.php.incï  üe]Ü   ºm         filenotfound_phar.phpt¦  üe]  ×g#m         gopearphar.php.inc)  üe]¯  Œ[ÁQm         indexhooha.php+   üe]-   pWûm         longfilename.phptæ  üe]ì   àŞ¢m      !   longfilename/makelongphar.php.inc™  üe]Ó   ,ª²Õm         makepearphar.php.inc  üe]w  ›¦¶&m         normalstat.phptÍ  üe]ş  ñáÊ»m         normalstat_phar.phpt   üe]  KÛam         opendir.phptï	  üe]t  iRm         opendir/makeopendirphar.php.inc  üe]Í  åÂå m         phpt_test.php.incu$  üe]»  Šàe{m         planet_php/default_phar.phpĞ  üe]1  *óÓüm         require_once.phpt«  üe]k  VË&¸m      )   require_once/makerequire_oncephar.php.incû  üe]á   ßİvm         require_once_phar.phptİ  üe]q  œ°#m      	   seek.phpt¤  üe]8  ï	Šfm         seek_phar.phpt½  üe]  î\|m         streamstat.phptÿ  üe]  ©eçm         streamstat_phar.phpt+  üe]5  hìRùm         test_tar.tar   üe]İ   µBê'm      ÍSMÓ0½ûWŒV ÛI[±½ì«
 Rv£¶8YÙv¼±6µ,Zÿ±[@àDrd??Ï¼ù*ŠMµŞÛ` "Ş{-”¾kÄ!`»gEQ_×ÄIXğÃhª®İåÖt»~S7õ’W¾óÌh¢qVmİŞ·áGHÈgÀçå¬œŞÎ8m/¸”ğ™}¸íğxo<^8Û?Â@Âø9ûÂ®^«eı¶úîè›g·;l»G¡Tâ(%¡„Wõªz¹¹Y½WëªY¬´%”GFOz²{´ñ'Ï{gï´é1ñù¯h9 LÍYK?òö„œÖp	?BS-Vªyİ¤ä‹!Œ(‰¢=İjçÑ
 M&?™™¤Œü•3D
 œd=´AíÆ½$’Ê¨ìû¼'‚NÍ“„Sr¢ù„ÿƒş,ºxw6›şV,ÛŞEÌ§svèÊd0ÂÎY¤2æV¬Ş5Töåq.Î&Oã¿“•æVÌ%œt‡;a·ÎõB·}DÉŒÄT Üe9}.Ù¨¾•’ÑKÃ0ÆßóW¥ĞÖ=øhcÌŠâF×!”õjƒ[R“•±ÿİKÇ6D|°OáîËï»ûš$)³u™$¬DëÀôJIõ

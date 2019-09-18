@@ -431,10 +431,10 @@ class PHP_Archive_Manager
     {
         $ret = $this->dump(true);
         if ($this->_html) {
-            array_walk($ret, create_function('&$a, $b', '$a = "<strong>$b:</strong> $a";'));
+            array_walk($ret, function(&$a, $b) { $a = "<strong>$b:</strong> $a"; });
             $ret = implode("<br />\n", $ret);
         } else {
-            array_walk($ret, create_function('&$a, $b', '$a = "$b: $a";'));
+            array_walk($ret, function(&$a, $b) { $a = "$b: $a"; });
             $ret = implode("\n", $ret);
         }
         return $ret;
