@@ -8,13 +8,13 @@
   <name>Greg Beaver</name>
   <user>cellog</user>
   <email>cellog@php.net</email>
-  <active>yes</active>
+  <active>no</active>
  </lead>
  <lead>
   <name>Marcus Boerger</name>
   <user>helly</user>
   <email>helly@php.net</email>
-  <active>yes</active>
+  <active>no</active>
  </lead>
  <lead>
   <name>Davey Shafik</name>
@@ -22,10 +22,9 @@
   <email>davey@php.net</email>
   <active>no</active>
  </lead>
- <date>2015-07-06</date>
- <time>07:37:52</time>
+ <date>2019-11-19</date>
  <version>
-  <release>0.12.0</release>
+  <release>0.13.0</release>
   <api>1.1.0</api>
  </version>
  <stability>
@@ -34,13 +33,7 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-sync with ext/phar
-* add empty directory support
-
-Fix bugs
-* Get rid of ereg_replace
-* Fix phar compression detection
-* Make tests run on PHP 5.2 - 7
+* PR #3:  Fix compatibility with PHP 7.4
  </notes>
  <contents>
   <dir baseinstalldir="PHP" name="/">
@@ -129,6 +122,21 @@ Fix bugs
  </dependencies>
  <phprelease />
  <changelog>
+  <release>
+   <version>
+    <release>0.13.0</release>
+    <api>1.1.0</api>
+   </version>
+   <stability>
+    <release>alpha</release>
+    <api>stable</api>
+   </stability>
+   <date>2019-11-19</date>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+* PR #3:  Fix compatibility with PHP 7.4
+   </notes>
+  </release>
   <release>
    <version>
     <release>0.12.0</release>
