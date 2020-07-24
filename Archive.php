@@ -510,7 +510,7 @@ class PHP_Archive
         $flags = unpack('V', substr($manifest, 6, 4));
         $ret = array('compressed' => $flags[1] & 0x00003000);
         // signature is not verified by default in PHP_Archive, phar is better
-        $ret['hassignature'] = $flags & 0x00010000;
+        $ret['hassignature'] = $flags[1] & 0x00010000;
         $aliaslen = unpack('V', substr($manifest, 10, 4));
         if ($aliaslen) {
             $ret['alias'] = substr($manifest, 14, $aliaslen[1]);
