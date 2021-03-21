@@ -18,4 +18,4 @@ matrix:
 
 script:
   - pear upgrade -f package.xml
-  - pear run-tests tests/
+  - pear run-tests -r tests/ || cat run-tests.log
