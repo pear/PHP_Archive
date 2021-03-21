@@ -22,9 +22,9 @@
   <email>davey@php.net</email>
   <active>no</active>
  </lead>
- <date>2019-11-19</date>
+ <date>2021-03-21</date>
  <version>
-  <release>0.13.0</release>
+  <release>0.14.0</release>
   <api>1.1.0</api>
  </version>
  <stability>
@@ -33,7 +33,7 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-* PR #3:  Fix compatibility with PHP 7.4
+* PR #4:  Compatibility fix for PHP 8.0.0
  </notes>
  <contents>
   <dir baseinstalldir="PHP" name="/">
@@ -122,6 +122,21 @@
  </dependencies>
  <phprelease />
  <changelog>
+  <release>
+   <version>
+    <release>0.14.0</release>
+    <api>1.1.0</api>
+   </version>
+   <stability>
+    <release>alpha</release>
+    <api>stable</api>
+   </stability>
+   <date>2021-03-21</date>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+* PR #4:  Compatibility fix for PHP 8.0.0
+   </notes>
+  </release>
   <release>
    <version>
     <release>0.13.0</release>
