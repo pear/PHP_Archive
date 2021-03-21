@@ -23,7 +23,7 @@
     },
     "description": "Create a single .phar file containing an entire application",
     "homepage": "http://pear.php.net/package/PHP_Archive",
-    "license": "PHP License",
+    "license": "PHP License v3.01",
     "name": "pear/php_archive",
     "support": {
         "issues": "http://pear.php.net/bugs/search.php?cmd=display&package_name[]=PHP_Archive",
