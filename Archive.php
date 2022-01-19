@@ -332,7 +332,7 @@ class PHP_Archive
      * @param string $buffer stub past '__HALT_'.'COMPILER();'
      * @return end of stub, prior to length of manifest.
      */
-    private static final function _endOfStubLength($buffer)
+    private static function _endOfStubLength($buffer)
     {
         $pos = 0;
         if (!strlen($buffer)) {
